@@ -17,6 +17,7 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 | Revision Date | Version # | Description | Author |
 | :--- | :--- | :--- | :--- |
 | 03/22/2026 | 0.01 | Initial conceptualization structure | 안효원 |
+| 03/22/2026 | 0.30 | Aligned with conceptualization template style | 안효원 |
 
 ---
 
@@ -29,6 +30,8 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 5. Problem Statement
 6. Glossary
 7. References
+
+본 문서는 메인 제출 문서 [Conceptualization_[22212046_안효원].md](Conceptualization_[22212046_%EC%95%88%ED%9A%A8%EC%9B%90].md)의 요약본입니다.
 
 ---
 

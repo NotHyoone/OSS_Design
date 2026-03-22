@@ -44,8 +44,12 @@ GitHub Activity Insight는 개발자의 GitHub 활동 데이터를 분석하여 
 
 ## 문서 구성
 
-- 기획 문서: [test.md](test.md)
-- 참고 문서: [Conceptualization_[22212046_안효원].md](Conceptualization_[22212046_%EC%95%88%ED%9A%A8%EC%9B%90].md)
+- 메인 기획 문서: [Conceptualization_[22212046_안효원].md]
+- 요약/작업 문서: [test.md](test.md)
+
+## 문서 템플릿 기준
+
+- Conceptualization 문서는 과제 예시 포맷(Revision history, Contents, Use case list, Concept of operation) 기준으로 구성했습니다.
 
 ## MVP 기준
 
