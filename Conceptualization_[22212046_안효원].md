@@ -1,265 +1,235 @@
-<img src="logo.png" align="right">
+# GitHub Activity Insight
+**GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템**
 
-
-
-<div style="font-size: 12pt; line-height: 160%;">
-
-# <div align="center">EngReadMate</div>
-<p align="center"><img src="EngReadMate.png" alt="EngReadMate App" width="420"></p>
-<p align="center" style="margin-top: 0; font-size: 12pt; line-height: 160%;">영어로 학습하는 모든 직종을 위한 전문 문서 읽기 도우미 앱</p>
-
-Student NO: 22212046
-Name : 안효원
-E-mail : gydnjs3505@gmail.com
-
----
-
-## [ Revision History ]
-
-| Revision Date | Version # | Description                          | Author |
-| ------------- | --------- | ------------------------------------ | ------ |
-| 03/13/2026    | 0.01      | Initial draft                        | 안효원 |
-| 03/13/2026    | 0.10      | Architecture and MVP added           | 안효원 |
-| 03/15/2026    | 0.20      | Full conceptualization doc           | 안효원 |
-
----
-
-## = Contents =
-
-1. Business Purpose
-2. System Context Diagram
-3. Use Case List
-4. Concept of Operation
-5. Problem Statement
-6. Glossary
-7. References
-
----
-
-## 1. Business Purpose
-
-**Project Background:**
-공학, 의학, 경영, 법학 등 다양한 분야의 전문 문서는 영어로 제공되는 비중이 높다. 실제로 W3Techs의 최신 집계에 따르면 콘텐츠 언어가 확인되는 웹사이트 중 영어 사용 비율은 **49.5%**로 가장 높다. 전공자와 실무자는 직무 지식 습득을 위해 영어 원문 자료를 직접 읽어야 하는 상황이 많지만, 긴 문장 구조 분석, 반복적인 단어 검색, 문단 전체 의미 파악에서 어려움을 경험한다. 따라서 영어 전문 문서를 읽을 때 **직무 맥락에 맞는 설명을 제공하는 앱 도구**가 필요하다.
-
-**Motivation:**
-영어 원문 학습은 직무 역량 강화에 필수적이지만, 언어적 장벽으로 인해 학습 효율이 저하된다. EF EPI 2025 기준 한국의 영어 숙련도는 **123개 국가/지역 중 48위(점수 522, Moderate)**로, 영어 기반 전문 문서를 빠르게 소화하기에는 여전히 학습 보조가 필요한 환경임을 보여준다. 단순 번역 도구는 분야별 문맥을 충분히 반영하지 못해 전문 용어를 부정확하게 처리하는 경우가 많다. 이 프로젝트는 특정 직군이 아닌, 영어 기반 학습이 필요한 다양한 직종을 지원하기 위한 읽기 보조 앱의 필요성에서 시작되었다.
-
-**Goal:**
-영어 전문 문서를 쉽게 이해할 수 있도록 지원하고, 직무 맥락 기반 단어 설명 및 문장 분석 기능을 제공하며, 다양한 직종 학습자의 영어 원문 학습 효율을 향상시키는 **앱 기반 도우미**를 개발한다.
-
-**Target Market:**
-- 영어 전문 문서를 읽는 대학(원)생 및 연구자
-- 영어 기반 업무 자료를 다루는 실무자(개발, 기획, 마케팅, 재무, 의료, 법무 등)
-- 영어 원문 학습이 필요한 자격증/직무 전환 준비 학습자
-
----
-
-## 2. System Context Diagram
-
-시스템은 사용자와 여러 외부 서비스 사이에서 **텍스트 분석을 수행하는 앱 시스템** 역할을 한다.
-
-```mermaid
-flowchart LR
-
-User["Learner / Professional"]
-App["EngReadMate App"]
-Dictionary["Domain Dictionary API"]
-Translator["Translation API"]
-AI["LLM / NLP Service"]
-Storage[("Local Storage / User DB")]
-
-User -->|"Text Input"| App
-App -->|"Word Lookup"| Dictionary
-App -->|"Translation Request"| Translator
-App -->|"Sentence Analysis"| AI
-App -->|"Vocabulary Save"| Storage
-App -->|"Explanation Result"| User
-```
-
-| 구성 요소 | 설명 |
+| 정보 항목 | 내용 |
 | :--- | :--- |
-| Learner / Professional | 시스템의 주 사용자. 영어 전문 문서를 읽는 학습자 및 실무자 |
-| EngReadMate App | 텍스트 입력을 받아 분석 결과를 제공하는 핵심 앱 |
-| Domain Dictionary API | 분야별 전문 용어의 정의 및 설명을 제공하는 외부 사전 API |
-| Translation API | 영어 문장을 한국어로 번역하는 외부 번역 서비스 |
-| LLM / NLP Service | 문장 구조 분석 및 의미 설명을 수행하는 AI 언어 모델 서비스 |
-| Local Storage / User DB | 저장 단어 및 사용자 학습 데이터를 저장하는 저장소 |
+| Student No | 22212046 |
+| Name | 안효원 |
+| E-Mail | gydnjs3505@gmail.com |
+
+**영남대학교 (Yeungnam University)**
 
 ---
 
-## 3. Use Case List
+### [ Revision history ]
 
-### 1) Input Text
+| Revision date | Version # | Description | Author |
+| :--- | :--- | :--- | :--- |
+| 03/18/2026 | 1.00 | First draft | 안효원 |
+| 03/20/2026 | 1.01 | Base conceptualization structure | 안효원 |
+| 03/22/2026 | 1.02 | Business value, operation flow, risk analysis enriched | 안효원 |
+
+---
+
+### Contents
+
+1. **Business purpose**
+2. **System context diagram**
+3. **Use case list**
+4. **Concept of operation**
+5. **Problem statement**
+6. **Glossary**
+7. **References**
+
+---
+
+## 1. Business purpose
+
+GitHub는 개발자의 프로젝트 경험, 협업 흔적, 기술 스택 변화가 모두 축적되는 대표 플랫폼이다. 하지만 많은 사용자들이 자신의 활동을 정량적으로만 확인하고, 어떤 방향으로 포트폴리오를 개선해야 하는지에 대한 해석은 얻지 못하고 있다.
+
+취업 준비생과 주니어 개발자는 특히 "내 GitHub가 실제로 어떤 역량을 보여주는가"를 판단하기 어렵다. 저장소 수, 커밋 수 같은 단일 지표는 활동량만 보여줄 뿐, 기술 다양성, 협업 성숙도, 지속성 같은 중요한 요소를 충분히 설명하지 못한다.
+
+GitHub Activity Insight는 이 문제를 해결하기 위해 설계되었다. 본 시스템은 GitHub 데이터를 수집하고 분석하여, 개발자 유형과 강점/개선 포인트를 함께 제시하는 해석 기반 피드백을 제공한다.
+
+**주요 목표:**
+- **객관적 분석 제공:** 활동 데이터를 단순 집계가 아닌 의미 있는 지표로 변환
+- **실행 가능한 피드백:** 개선 우선순위와 구체적 액션 제안
+- **성과 확인 가능성:** 분석 이력을 통해 개선 전후 추세 비교
+- **타겟 고객:** 취업 준비생, 개인 개발자, 포트폴리오 개선이 필요한 사용자
+
+---
+
+## 2. System context diagram
+
+시스템은 사용자, GitHub API, 분석 엔진, 리포트 생성 모듈을 연결하는 웹 기반 분석 플랫폼이다.
+
+![System Context Diagram](diagram.png)
+
+**Data flow (요약):**
+1. User가 GitHub ID를 입력한다.
+2. Web App이 GitHub API에서 저장소/커밋/협업 데이터를 수집한다.
+3. Analysis Module이 정규화 및 지표 계산을 수행한다.
+4. Evaluation Engine이 유형 분류와 점수 산출, 피드백 생성 작업을 수행한다.
+5. Report Generator가 대시보드와 PDF 결과를 제공한다.
+
+**외부/내부 구성 요소:**
+- **User:** GitHub ID 입력, 결과 조회, 리포트 다운로드 수행
+- **Insight Web App:** 입력 처리, 요청 라우팅, 결과 시각화
+- **GitHub API:** Repository, commit, language, contributor 데이터 제공
+- **Analysis Module:** 정규화, 파생 지표 계산, 데이터 품질 검증
+- **Evaluation Engine:** 점수화, 개발자 유형 분류, 개선 제안 생성
+- **Server Storage:** 분석 이력 저장 및 재분석 비교 데이터 제공
+
+---
+
+## 3. Use case list
+
+### 1) Connect GitHub Profile
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Actor** | User |
-| **Description** | 사용자가 분석할 영어 문장 또는 문단을 앱에 입력한다. |
+| Actor | User |
+| Description | GitHub ID를 입력하고 분석 요청을 시작한다. |
 
----
-
-### 2) Word Meaning
+### 2) Collect Activity Data
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Actor** | User |
-| **Description** | 사용자가 특정 단어를 선택하면 분야별 사전 API를 통해 의미를 조회한다. |
+| Actor | System |
+| Description | GitHub API에서 저장소, 커밋, 언어, 협업 데이터를 수집한다. |
 
----
-
-### 3) Sentence Translation
+### 3) Analyze Developer Activity
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Actor** | User |
-| **Description** | 사용자가 문장 번역을 요청하면 번역 API를 통해 한국어 번역 결과를 제공한다. |
+| Actor | System |
+| Description | 활동 패턴, 언어 비율, 프로젝트 규모 지표를 계산한다. |
 
----
-
-### 4) Sentence Analysis
+### 4) Evaluate Competency
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Actor** | User |
-| **Description** | 사용자가 문장 구조 분석을 요청하면 AI 모델이 문장 성분 및 의미를 설명한다. |
+| Actor | System |
+| Description | 활동성/협업성/기술 다양성 기반 역량 점수를 산출한다. |
 
----
-
-### 5) Paragraph Summary
+### 5) Provide Personalized Feedback
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Actor** | User |
-| **Description** | 사용자가 문단 요약을 요청하면 AI 모델이 핵심 내용을 요약하여 제공한다. |
+| Actor | System, User |
+| Description | 개발자 유형 분류 결과와 개선 방향을 사용자에게 제공한다. |
 
----
-
-### 6) Vocabulary Save
+### 6) Generate Report
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Actor** | User |
-| **Description** | 사용자가 학습한 단어를 개인 단어장에 저장하여 나중에 복습할 수 있다. |
+| Actor | User |
+| Description | 분석 결과를 대시보드 및 PDF 형태로 확인한다. |
 
 ---
 
-## 4. Concept of Operation
+## 4. Concept of operation
 
-### 1) Input Text
+각 기능은 Purpose, Approach, Dynamics, Goals 기준으로 정의한다.
+
+### 1) Connect GitHub Profile
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Purpose** | 분석할 영어 문장 또는 문단을 앱에 입력한다. |
-| **Approach** | 사용자가 앱 인터페이스의 텍스트 입력창에 영어 문장을 붙여넣거나 직접 입력한 후 분석 요청 버튼을 클릭한다. App Core Module은 입력 텍스트를 수신하여 Text Processing Module로 전달한다. |
-| **Dynamics** | 사용자가 텍스트 입력 후 분석 요청 시 |
-| **Goals** | 텍스트 입력 및 내부 처리 모듈 전달 기능 구현 |
+| Purpose | 분석 대상 식별 |
+| Approach | GitHub ID 입력값 검증 후 분석 토큰 발급 |
+| Dynamics | 분석 시작 버튼 클릭 시 |
+| Goals | 오류 없는 요청 생성 |
 
----
-
-### 2) Word Explanation
+### 2) Collect Activity Data
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Purpose** | 전문 용어의 정확한 의미를 직무 맥락에서 제공한다. |
-| **Approach** | 사용자가 텍스트 내 특정 단어를 클릭하면, 앱이 Domain Dictionary API에 해당 단어를 조회하여 분야별 정의와 예시를 반환한다. |
-| **Dynamics** | 사용자가 단어를 클릭하는 시점 |
-| **Goals** | 전문 용어에 대한 즉각적인 설명 제공 기능 구현 |
+| Purpose | 원천 데이터 확보 |
+| Approach | GitHub API 호출, 페이징/재시도 처리, 정규화 전 저장 |
+| Dynamics | 요청 생성 직후 자동 실행 |
+| Goals | 안정적인 데이터 수집 |
 
----
-
-### 3) Sentence Translation
+### 3) Analyze Developer Activity
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Purpose** | 영어 문장을 한국어로 번역하여 이해를 돕는다. |
-| **Approach** | 사용자가 번역 버튼을 클릭하면 선택된 문장이 Translation API로 전달되고, 번역 결과가 앱 결과 화면에 표시된다. |
-| **Dynamics** | 사용자가 번역 버튼을 클릭하는 시점 |
-| **Goals** | 번역 API 연동 및 결과 표시 기능 구현 |
+| Purpose | 지표 생성 |
+| Approach | 언어 비율, 프로젝트 수/규모, 커밋 주기 계산 |
+| Dynamics | 수집 완료 후 자동 실행 |
+| Goals | 핵심 지표 테이블 생성 |
 
----
-
-### 4) Sentence Analysis
+### 4) Evaluate Competency
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Purpose** | 영어 문장의 구조를 분석하여 이해를 지원한다. |
-| **Approach** | 사용자가 문장 분석을 요청하면 AI Analysis Module이 LLM을 통해 문장 성분(주어, 동사, 목적어 등)과 문법 구조를 설명한 결과를 반환한다. |
-| **Dynamics** | 사용자가 문장 분석 버튼을 클릭하는 시점 |
-| **Goals** | AI 기반 문장 구조 분석 및 설명 기능 구현 |
+| Purpose | 역량 해석 |
+| Approach | 가중치 기반 점수화 및 개발자 유형 분류 |
+| Dynamics | 지표 생성 직후 실행 |
+| Goals | 설명 가능한 점수 결과 제공 |
 
----
-
-### 5) Paragraph Summary
+### 5) Provide Personalized Feedback
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Purpose** | 긴 문단의 핵심 내용을 요약하여 빠른 이해를 돕는다. |
-| **Approach** | 사용자가 문단 요약을 요청하면 AI Analysis Module이 문단 전체를 LLM에 전달하여 3~5줄 내외의 요약문을 생성하고 반환한다. |
-| **Dynamics** | 사용자가 요약 버튼을 클릭하는 시점 |
-| **Goals** | 문단 요약 기능 구현 |
+| Purpose | 개선 행동 제시 |
+| Approach | 점수 약점 구간을 개선 액션으로 매핑 |
+| Dynamics | 평가 완료 후 실행 |
+| Goals | 사용자별 행동 가이드 제공 |
 
----
-
-### 6) Vocabulary Save
+### 6) Generate Report
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **Purpose** | 학습한 단어를 저장하여 복습할 수 있도록 한다. |
-| **Approach** | 사용자가 단어 설명 결과 화면에서 저장 버튼을 클릭하면 해당 단어와 정의가 로컬 저장소 또는 사용자 DB에 저장되고, 개인 단어장에서 목록으로 확인할 수 있다. |
-| **Dynamics** | 사용자가 단어 저장 버튼을 클릭하는 시점 |
-| **Goals** | 단어 저장 및 단어장 조회 기능 구현 |
+| Purpose | 결과 재사용성 확보 |
+| Approach | 대시보드 렌더링 및 PDF 내보내기 |
+| Dynamics | 사용자 요청 시 |
+| Goals | 공유 가능한 리포트 생성 |
+
+**운영 시나리오 (End-to-End):**
+1. 사용자가 GitHub ID를 입력한다.
+2. 시스템이 공개 데이터 수집 및 전처리를 수행한다.
+3. 지표를 계산해 역량 점수와 개발자 유형을 생성한다.
+4. 개선 우선순위를 포함한 피드백 카드를 제시한다.
+5. 사용자가 PDF 리포트를 내려받아 포트폴리오 개선에 활용한다.
 
 ---
 
-## 5. Problem Statement
+## 5. Problem statement
 
-**시스템 구조:**
-본 시스템은 앱 클라이언트, 앱 서비스 계층, 외부 AI/사전/번역 서비스를 연동하는 구조로 설계한다. 내부적으로는 입력 텍스트를 처리하는 모듈과 AI 분석 모듈을 분리하여 기능 확장성과 유지보수성을 확보한다.
+본 프로젝트는 단순 통계 대시보드가 아니라, 데이터 해석과 성장 가이드를 함께 제공하는 분석 시스템을 목표로 한다. 이를 위해 정확도, 신뢰도, 설명 가능성을 동시에 고려해야 한다.
 
-**기술적 과제 및 제약 사항:**
+**MVP 범위:**
+1. GitHub ID 기반 분석 요청
+2. 저장소/커밋/언어/협업 데이터 수집
+3. 활동성 및 기술 스택 지표 산출
+4. 역량 점수 및 유형 분류
+5. 개인 맞춤형 피드백과 PDF 리포트 생성
 
-1. **전문 용어 번역 정확도 문제:** 일반 번역 API는 분야별 전문 용어를 부정확하게 번역할 가능성이 있어, 직무 문맥 기반 보정 로직이 필요하다.
+**제약 및 문제 정의:**
+1. GitHub API rate limit 제약으로 대량 요청 시 지연 가능성이 있다.
+2. 공개 데이터 중심 분석 특성상 비공개 프로젝트 활동은 반영이 어렵다.
+3. 단일 지표 해석은 왜곡 가능성이 있어 복합 지표 설계가 필요하다.
+4. 사용자마다 활동 맥락이 달라 동일 점수라도 해석 차이가 발생할 수 있다.
+5. 피드백이 추상적이면 실제 행동 변화로 이어지기 어렵다.
 
-2. **긴 문장 구조 분석의 복잡성:** 전문 문서는 복합 종속절, 수동태, 축약 표현이 많아 일반적인 NLP 분석보다 높은 난이도를 요구한다.
-
-3. **외부 API 의존성:** Translation API, Dictionary API, LLM API 등 여러 외부 서비스에 의존하므로, 서비스 장애 시 대체 처리 방안이 필요하다.
-
-4. **응답 속도 문제:** LLM 기반 분석은 응답 시간이 길어질 수 있으며, 사용자 경험을 위해 적절한 로딩 처리 및 최적화가 필요하다.
-
-5. **API 비용 문제:** OpenAI 등 LLM API는 호출량에 따라 비용이 발생하므로, 효율적인 API 호출 전략이 필요하다.
-
-6. **보안 및 접근 제어:** 사용자 단어장 데이터는 인증된 사용자만 접근 가능해야 하며, 개인정보 및 학습 데이터 보호가 필요하다.
-
-7. **운영 확장성:** 초기에는 단어/문장 중심 분석을 제공하고, 이후 PDF 업로드 및 개인화 학습 기능까지 확장 가능한 모듈형 구조가 요구된다.
+**대응 전략:**
+- 캐시 및 재시도 정책으로 API 실패/지연을 완화한다.
+- 점수와 함께 근거 지표를 제공해 설명 가능성을 높인다.
+- 개선 액션을 우선순위 기반 체크리스트로 제시한다.
+- 분석 이력 비교를 통해 변화 추세 중심 피드백을 제공한다.
 
 ---
 
 ## 6. Glossary
 
-| Term                | Description                                                   |
-| :------------------ | :------------------------------------------------------------ |
-| NLP                 | Natural Language Processing. 자연어 처리 기술로, 컴퓨터가 인간의 언어를 이해·분석하는 AI 기술 |
-| LLM                 | Large Language Model. GPT 등 대규모 텍스트 데이터로 학습된 대형 언어 모델 |
-| Technical Document  | 공학, 의학, 경영, 법학 등 분야별 전문 영어 문서 (교재, 가이드, 논문, 보고서 등) |
-| API                 | Application Programming Interface. 외부 서비스와 데이터를 주고받기 위한 인터페이스 |
-| Sentence Parsing    | 문장을 주어, 동사, 목적어 등의 문법 성분으로 분해하여 구조를 분석하는 작업 |
-| Vocabulary          | 사용자가 저장한 학습 단어 목록 |
-| MVP                 | Minimum Viable Product. 핵심 기능만을 포함한 최소 실행 가능 제품 |
-| App Architecture    | 프레젠테이션(App UI), 비즈니스 로직(App Service), 데이터(Storage) 계층으로 분리된 구조 |
+| 용어 | 설명 |
+| :--- | :--- |
+| Activity Metric | 커밋 빈도, 프로젝트 수, 언어 비율 등 활동 정량 지표 |
+| Collaboration Index | PR, issue, contributor 관련 협업 수준 지표 |
+| Technical Stack Profile | 프로젝트 언어/도메인 기반 기술 성향 분류 결과 |
+| Scoring Model | 여러 지표를 통합해 점수로 환산하는 규칙 세트 |
+| Explainability | 점수 산출 이유를 사용자에게 이해 가능하게 제공하는 특성 |
+| Insight Report | 분석 결과와 피드백을 담은 웹/문서 형태 결과물 |
+| Rate Limit | API 호출 횟수 제한 정책 |
+| Normalization | 서로 다른 형식 데이터를 비교 가능한 구조로 변환하는 과정 |
 
 ---
 
 ## 7. References
 
-1. Jurafsky, D. & Martin, J. H. — *Speech and Language Processing* (3rd ed. draft), Stanford University
-2. Kleppmann, M. — *Designing Data-Intensive Applications*, O'Reilly Media, 2017
-3. OpenAI — *OpenAI API Documentation*, https://platform.openai.com/docs
-4. Google — *Cloud Translation API Documentation*, https://cloud.google.com/translate/docs
-5. DeepL — *DeepL API Documentation*, https://www.deepl.com/docs-api
-6. Free Dictionary API — https://dictionaryapi.dev
-7. W3Techs — *Usage statistics of content languages for websites*, https://w3techs.com/technologies/overview/content_language
-8. EF English Proficiency Index 2025 — *Global Ranking of Countries and Regions*, https://www.ef.com/wwen/epi/
-
----
-
-</div>
+1. GitHub, "REST API Documentation," GitHub Docs. Available: https://docs.github.com/en/rest (accessed: 2026-03-22).
+2. GitHub, "GraphQL API Documentation," GitHub Docs. Available: https://docs.github.com/en/graphql (accessed: 2026-03-22).
+3. E. Kalliamvakou et al., "The Promises and Perils of Mining GitHub Data," Empirical Software Engineering, Springer.
+4. C. Bird et al., "The Promises and Perils of Mining GitHub," Proceedings of the International Working Conference on Mining Software Repositories (MSR).
+5. OpenSSF, "Open Source Project Security Baseline." Available: https://baseline.openssf.org (accessed: 2026-03-22).
