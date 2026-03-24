@@ -1,0 +1,51 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GitHub Activity Insight logo">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0D1B2A"/>
+      <stop offset="100%" stop-color="#1B263B"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="100%" stop-color="#34F5C5"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="8" y="8" width="1184" height="304" rx="28" fill="url(#bgGrad)" stroke="#2E3D58" stroke-width="2"/>
+
+  <!-- Icon tile -->
+  <g transform="translate(36,36)">
+    <rect width="248" height="248" rx="26" fill="#0A1422" stroke="#31425F" stroke-width="2"/>
+
+    <!-- Activity nodes -->
+    <circle cx="58" cy="188" r="10" fill="#00D4FF"/>
+    <circle cx="108" cy="142" r="10" fill="#34F5C5"/>
+    <circle cx="158" cy="98" r="10" fill="#00D4FF"/>
+    <circle cx="206" cy="58" r="10" fill="#34F5C5"/>
+
+    <!-- Trend path -->
+    <path d="M58 188 L108 142 L158 98 L206 58" fill="none" stroke="url(#accentGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#softGlow)"/>
+
+    <!-- Git branch motif -->
+    <circle cx="72" cy="70" r="9" fill="#7A8FAE"/>
+    <circle cx="122" cy="70" r="9" fill="#7A8FAE"/>
+    <circle cx="122" cy="118" r="9" fill="#7A8FAE"/>
+    <path d="M72 70 H122 V118" fill="none" stroke="#7A8FAE" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(330,96)">
+    <text x="0" y="0" fill="#EAF2FF" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" letter-spacing="0.5">GitHub Activity Insight</text>
+    <text x="0" y="52" fill="#9FB4D6" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" letter-spacing="0.2">Developer Portfolio Analytics</text>
+
+    <rect x="0" y="86" width="610" height="8" rx="4" fill="url(#accentGrad)"/>
+
+    <text x="0" y="142" fill="#B8C9E3" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400">Measure activity. Reveal strengths. Guide improvement.</text>
+  </g>
+</svg>
