@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>분석 이력 비교 – GitHub Activity Insight</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">GitHub Activity Insight</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="history.html" class="nav-link active">이력 비교</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-content">
+    <div class="container">
+
+      <!-- Page Header -->
+      <section class="page-header section-padding">
+        <h1 class="page-title">분석 이력 비교 <span class="highlight">(UC-08)</span></h1>
+        <p class="page-desc">두 시점의 분석 결과를 비교해 역량 변화 추세를 확인하세요.</p>
+      </section>
+
+      <!-- No History Warning (UC-08 1a) -->
+      <div class="empty-state hidden" id="empty-state" role="status">
+        <span class="empty-icon" aria-hidden="true">📭</span>
+        <p class="empty-msg">저장된 분석 이력이 2건 미만입니다.</p>
+        <a href="index.html" class="btn btn-primary">지금 분석 시작하기</a>
+      </div>
+
+      <!-- Time Point Selector (UC-08 Step 2-4) -->
+      <div class="compare-controls card section-padding" id="compare-controls">
+        <div class="compare-selectors">
+
+          <div class="selector-group">
+            <label for="base-select" class="form-label">🔵 기준 시점</label>
+            <select id="base-select" class="form-select" aria-label="기준 시점 선택">
+              <option value="">-- 선택 --</option>
+              <!-- TODO: AnalysisHistory 데이터 기반으로 옵션을 동적 생성 -->
+            </select>
+          </div>
+
+          <div class="selector-arrow" aria-hidden="true">→</div>
+
+          <div class="selector-group">
+            <label for="compare-select" class="form-label">🟢 비교 시점</label>
+            <select id="compare-select" class="form-select" aria-label="비교 시점 선택">
+              <option value="">-- 선택 --</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary" id="compare-btn" disabled>비교하기</button>
+        </div>
+      </div>
+
+      <!-- ── Compare Result Section ── -->
+      <section class="compare-result hidden section-padding" id="compare-result" aria-labelledby="compare-result-heading">
+        <h2 class="section-title" id="compare-result-heading">비교 결과</h2>
+
+        <!-- Summary Cards -->
+        <div class="compare-summary-cards" id="compare-summary-cards">
+          <div class="compare-card compare-card--base">
+            <span class="compare-card-label">기준</span>
+            <span class="compare-card-date" id="base-date">--</span>
+            <span class="compare-card-score" id="base-score">--</span>
+            <span class="compare-card-type" id="base-type">--</span>
+          </div>
+          <div class="compare-vs" aria-hidden="true">VS</div>
+          <div class="compare-card compare-card--current">
+            <span class="compare-card-label">비교</span>
+            <span class="compare-card-date" id="current-date">--</span>
+            <span class="compare-card-score" id="current-score">--</span>
+            <span class="compare-card-type" id="current-type">--</span>
+          </div>
+        </div>
+
+        <!-- Comparison Table (UC-08 Step 7) -->
+        <div class="table-wrapper" role="region" aria-label="지표 비교 테이블">
+          <table class="compare-table" id="compare-table">
+            <caption class="sr-only">기준 시점과 비교 시점의 지표 비교</caption>
+            <thead>
+              <tr>
+                <th scope="col">지표</th>
+                <th scope="col">기준값</th>
+                <th scope="col">현재값</th>
+                <th scope="col">증감</th>
+                <th scope="col">증감율</th>
+              </tr>
+            </thead>
+            <tbody id="compare-tbody">
+              <!-- TODO(UC-08 Step 6-7): AnalysisResult 두 건 비교 후 행 동적 생성 -->
+              <!-- 행 예시 (JS에서 생성)
+              <tr>
+                <td>종합 점수</td>
+                <td>62</td>
+                <td>74</td>
+                <td class="delta delta--up">+12</td>
+                <td class="delta delta--up">+19.4%</td>
+              </tr>
+              -->
+              <tr class="compare-placeholder-row">
+                <td colspan="5" class="placeholder-cell">시점을 선택하고 [비교하기]를 누르세요.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Sparkline Area (UC-08 Step 9) -->
+        <div class="sparkline-section" aria-labelledby="sparkline-heading">
+          <h3 class="section-subtitle" id="sparkline-heading">종합 점수 추이 (최근 5회)</h3>
+          <div class="sparkline-wrapper" id="sparkline-wrapper" aria-label="점수 추이 스파크라인">
+            <!-- TODO: Canvas 또는 SVG 기반 스파크라인 렌더링 -->
+            <canvas id="sparkline-canvas" width="600" height="80" aria-label="점수 추이 그래프"></canvas>
+          </div>
+        </div>
+
+        <!-- Encouragement Message (UC-08 Step 10) -->
+        <div class="encourage-box" id="encourage-box" aria-live="polite">
+          <!-- TODO(UC-08 Step 10): FeedbackGenerator의 개선 메시지 출력 -->
+          <span class="encourage-icon" aria-hidden="true">🎉</span>
+          <p class="encourage-text" id="encourage-text">비교 결과를 확인하면 격려 메시지가 여기에 표시됩니다.</p>
+        </div>
+
+      </section>
+
+      <!-- History List -->
+      <section class="history-list-section section-padding" aria-labelledby="history-list-heading">
+        <h2 class="section-title" id="history-list-heading">전체 분석 이력</h2>
+        <div class="history-list" id="history-list" role="list">
+          <!-- TODO: AnalysisHistory 조회 후 카드 동적 생성 -->
+          <div class="history-item history-item--placeholder" role="listitem">
+            <span class="history-item-placeholder-text">분석 이력이 없습니다.</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p class="footer-text">GitHub Activity Insight &copy; 2026 · 22212046 안효원</p>
+      <p class="footer-text">영남대학교 오픈소스소프트웨어 설계</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

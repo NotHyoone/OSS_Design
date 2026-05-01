@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Activity Insight</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">GitHub Activity Insight</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link active">Home</a>
+        <a href="history.html" class="nav-link">이력 비교</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-content">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            당신의 GitHub 활동,<br />
+            <span class="highlight">역량으로 해석해 드립니다.</span>
+          </h1>
+          <p class="hero-desc">
+            단순 커밋 수 통계가 아니라, 활동성 · 기술 다양성 · 협업도 · 지속성을
+            종합 분석해 실질적인 개선 방향을 제시합니다.
+          </p>
+
+          <!-- Metric Chips -->
+          <ul class="metric-chips" aria-label="분석 지표">
+            <li class="chip chip--activity">📈 활동성</li>
+            <li class="chip chip--diversity">🧩 기술 다양성</li>
+            <li class="chip chip--collab">🤝 협업도</li>
+            <li class="chip chip--persist">🔄 지속성</li>
+          </ul>
+        </div>
+
+        <!-- Input Card (UC-01) -->
+        <div class="card input-card" id="input-card">
+          <h2 class="card-title">분석 시작</h2>
+          <p class="card-desc">GitHub ID를 입력하면 역량 분석을 시작합니다.</p>
+
+          <form id="github-form" novalidate>
+            <div class="form-group">
+              <label for="github-id" class="form-label">GitHub ID</label>
+              <div class="input-wrapper">
+                <span class="input-prefix">github.com /</span>
+                <input
+                  type="text"
+                  id="github-id"
+                  name="githubId"
+                  class="form-input"
+                  placeholder="username"
+                  autocomplete="off"
+                  maxlength="39"
+                  aria-describedby="github-id-hint github-id-error"
+                  required
+                />
+                <span class="input-status" id="input-status" aria-live="polite"></span>
+              </div>
+              <p class="form-hint" id="github-id-hint">영문, 숫자, 하이픈(-)만 사용 가능합니다.</p>
+              <p class="form-error hidden" id="github-id-error" role="alert"></p>
+            </div>
+
+            <!-- TODO(UC-02): 중복 RUNNING 요청 체크 후 버튼 활성화 -->
+            <button type="submit" class="btn btn-primary btn-full" id="start-btn" disabled>
+              Start Analysis
+            </button>
+          </form>
+
+          <div class="divider"></div>
+          <p class="card-footnote">
+            분석에는 일반적으로 <strong>10 ~ 60초</strong>가 소요됩니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Section -->
+    <section class="features section-padding">
+      <div class="container">
+        <h2 class="section-title">무엇을 분석하나요?</h2>
+        <div class="feature-grid">
+
+          <article class="feature-card" aria-label="활동성">
+            <div class="feature-icon activity-icon">📈</div>
+            <h3 class="feature-title">활동성</h3>
+            <p class="feature-desc">커밋 빈도, 저장소 업데이트 빈도를 기반으로 얼마나 꾸준히 활동하는지 측정합니다.</p>
+          </article>
+
+          <article class="feature-card" aria-label="기술 다양성">
+            <div class="feature-icon diversity-icon">🧩</div>
+            <h3 class="feature-title">기술 다양성</h3>
+            <p class="feature-desc">사용 언어 수와 프로젝트 유형 다양도를 분석해 기술 스택 폭을 평가합니다.</p>
+          </article>
+
+          <article class="feature-card" aria-label="협업도">
+            <div class="feature-icon collab-icon">🤝</div>
+            <h3 class="feature-title">협업도</h3>
+            <p class="feature-desc">PR · Issue · Fork 참여율을 측정해 오픈소스 및 팀 협업 역량을 파악합니다.</p>
+          </article>
+
+          <article class="feature-card" aria-label="지속성">
+            <div class="feature-icon persist-icon">🔄</div>
+            <h3 class="feature-title">지속성</h3>
+            <p class="feature-desc">활동 기간, 갭 분석, 연속성을 종합해 개발자로서의 꾸준함을 평가합니다.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p class="footer-text">GitHub Activity Insight &copy; 2026 · 22212046 안효원</p>
+      <p class="footer-text">영남대학교 오픈소스소프트웨어 설계</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

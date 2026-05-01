@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>분석 결과 – GitHub Activity Insight</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">GitHub Activity Insight</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="history.html" class="nav-link">이력 비교</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-content">
+    <div class="container">
+
+      <!-- Result Header -->
+      <section class="result-header section-padding">
+        <div class="result-identity">
+          <img src="https://avatars.githubusercontent.com/u/0" alt="GitHub Avatar" class="result-avatar" id="result-avatar" />
+          <div class="result-identity-text">
+            <h1 class="result-username" id="result-username">@username</h1>
+            <span class="result-type-badge" id="developer-type">Junior Developer</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons (UC-07, UC-08) -->
+        <div class="result-actions">
+          <button class="btn btn-ghost" id="btn-history" onclick="location.href='history.html'">
+            📊 이력 비교
+          </button>
+          <button class="btn btn-primary" id="btn-pdf">
+            ⬇️ PDF 다운로드
+          </button>
+        </div>
+      </section>
+
+      <!-- Low Trust Warning (UC-06 4-7b) -->
+      <div class="notice-box notice--warn hidden" id="trust-warning" role="alert" aria-live="polite">
+        <span class="notice-icon">⚠️</span>
+        <span class="notice-msg">데이터 일부 누락으로 인해 <strong>부분 분석</strong> 결과입니다. 일부 지표의 신뢰도가 낮을 수 있습니다.</span>
+      </div>
+
+      <!-- ── Score Section ── -->
+      <section class="section-padding" aria-labelledby="score-heading">
+        <h2 class="section-title" id="score-heading">종합 역량 점수</h2>
+        <div class="score-layout">
+
+          <!-- Gauge Placeholder -->
+          <div class="score-gauge-wrapper" aria-hidden="true">
+            <svg class="gauge-svg" viewBox="0 0 200 120" role="img" aria-label="역량 점수 게이지">
+              <!-- Track arc -->
+              <path class="gauge-track" d="M 20 110 A 90 90 0 0 1 180 110" />
+              <!-- Fill arc – stroke-dashoffset is controlled by JS -->
+              <path class="gauge-fill" id="gauge-fill" d="M 20 110 A 90 90 0 0 1 180 110"
+                    stroke-dasharray="283" stroke-dashoffset="283" />
+              <text class="gauge-value" x="100" y="100" text-anchor="middle" id="gauge-score-text">--</text>
+              <text class="gauge-label" x="100" y="118" text-anchor="middle">/ 100</text>
+            </svg>
+            <div class="gauge-meta">
+              분석일: <span id="analysis-date">--</span> ·
+              신뢰도: <span class="trust-badge" id="trust-level">HIGH</span>
+            </div>
+          </div>
+
+          <!-- Score Summary -->
+          <div class="score-summary">
+            <p class="score-summary-text" id="score-summary-text">
+              <!-- TODO(UC-05): Evaluation Engine에서 생성한 종합 평가 문구가 이곳에 출력됩니다. -->
+              종합 평가 텍스트가 여기에 표시됩니다.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Metrics Section (UC-06 Step 5) ── -->
+      <section class="section-padding" aria-labelledby="metrics-heading">
+        <h2 class="section-title" id="metrics-heading">세부 지표</h2>
+        <div class="metrics-grid" id="metrics-grid">
+
+          <div class="metric-card" id="metric-activity">
+            <div class="metric-card-header">
+              <span class="metric-icon" aria-hidden="true">📈</span>
+              <span class="metric-name">활동성</span>
+              <span class="metric-trust-tag hidden" aria-label="신뢰도 낮음">LOW</span>
+            </div>
+            <div class="metric-bar-track">
+              <div class="metric-bar-fill metric-bar--activity" style="width: 0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="활동성 점수"></div>
+            </div>
+            <div class="metric-score-row">
+              <span class="metric-score" id="score-activity">--</span>
+              <span class="metric-score-max">/ 100</span>
+            </div>
+            <p class="metric-desc" id="desc-activity">커밋 빈도 및 저장소 업데이트 빈도 기반</p>
+          </div>
+
+          <div class="metric-card" id="metric-diversity">
+            <div class="metric-card-header">
+              <span class="metric-icon" aria-hidden="true">🧩</span>
+              <span class="metric-name">기술 다양성</span>
+              <span class="metric-trust-tag hidden" aria-label="신뢰도 낮음">LOW</span>
+            </div>
+            <div class="metric-bar-track">
+              <div class="metric-bar-fill metric-bar--diversity" style="width: 0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="기술 다양성 점수"></div>
+            </div>
+            <div class="metric-score-row">
+              <span class="metric-score" id="score-diversity">--</span>
+              <span class="metric-score-max">/ 100</span>
+            </div>
+            <p class="metric-desc" id="desc-diversity">사용 언어 수, 프로젝트 유형 다양도 기반</p>
+          </div>
+
+          <div class="metric-card" id="metric-collab">
+            <div class="metric-card-header">
+              <span class="metric-icon" aria-hidden="true">🤝</span>
+              <span class="metric-name">협업도</span>
+              <span class="metric-trust-tag hidden" aria-label="신뢰도 낮음">LOW</span>
+            </div>
+            <div class="metric-bar-track">
+              <div class="metric-bar-fill metric-bar--collab" style="width: 0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="협업도 점수"></div>
+            </div>
+            <div class="metric-score-row">
+              <span class="metric-score" id="score-collab">--</span>
+              <span class="metric-score-max">/ 100</span>
+            </div>
+            <p class="metric-desc" id="desc-collab">PR 참여율, Issue 참여율, Fork 활동 기반</p>
+          </div>
+
+          <div class="metric-card" id="metric-persist">
+            <div class="metric-card-header">
+              <span class="metric-icon" aria-hidden="true">🔄</span>
+              <span class="metric-name">지속성</span>
+              <span class="metric-trust-tag hidden" aria-label="신뢰도 낮음">LOW</span>
+            </div>
+            <div class="metric-bar-track">
+              <div class="metric-bar-fill metric-bar--persist" style="width: 0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="지속성 점수"></div>
+            </div>
+            <div class="metric-score-row">
+              <span class="metric-score" id="score-persist">--</span>
+              <span class="metric-score-max">/ 100</span>
+            </div>
+            <p class="metric-desc" id="desc-persist">활동 기간, 갭 분석, 연속성 기반</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Feedback Section (UC-06 Step 6-7) ── -->
+      <section class="section-padding feedback-section" aria-labelledby="feedback-heading">
+        <h2 class="section-title" id="feedback-heading">강점 & 개선 영역</h2>
+        <div class="feedback-columns">
+
+          <!-- Strengths -->
+          <div class="feedback-column">
+            <h3 class="feedback-col-title feedback-col-title--strength">
+              <span aria-hidden="true">✅</span> 강점 (Strengths)
+            </h3>
+            <ul class="feedback-list" id="strengths-list" aria-label="강점 목록">
+              <!-- TODO(UC-05): FeedbackGenerator가 생성한 강점 항목이 여기에 출력됩니다. -->
+              <li class="feedback-item feedback-item--placeholder">분석 후 강점 항목이 여기에 표시됩니다.</li>
+            </ul>
+          </div>
+
+          <!-- Improvements -->
+          <div class="feedback-column">
+            <h3 class="feedback-col-title feedback-col-title--improve">
+              <span aria-hidden="true">🔧</span> 개선 영역 (Improvements)
+            </h3>
+            <ol class="feedback-list" id="improvements-list" aria-label="개선 액션 목록">
+              <!-- TODO(UC-05): FeedbackGenerator가 생성한 개선 액션(3–5개)이 여기에 출력됩니다. -->
+              <li class="feedback-item feedback-item--placeholder">분석 후 개선 액션이 여기에 표시됩니다.</li>
+            </ol>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Re-analyze -->
+      <div class="reanalyze-row section-padding">
+        <button class="btn btn-ghost" onclick="location.href='index.html'">새 분석 시작</button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p class="footer-text">GitHub Activity Insight &copy; 2026 · 22212046 안효원</p>
+      <p class="footer-text">영남대학교 오픈소스소프트웨어 설계</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
