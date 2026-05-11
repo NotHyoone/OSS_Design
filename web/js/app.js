@@ -74,115 +74,79 @@ function deltaLabel(delta) {
 const API = {
   /**
    * GitHub ID 존재 여부 확인 (UC-01 Step 3)
-   * TODO: GET /api/github/validate?id={githubId}
+   * GET /api/github/validate?id={githubId}
    * @param {string} githubId
    * @returns {Promise<{valid: boolean, avatarUrl?: string}>}
    */
   validateGithubId: async (githubId) => {
-    // --- STUB ---
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ valid: true, avatarUrl: `https://avatars.githubusercontent.com/${githubId}` });
-      }, 800);
-    });
+    const res = await fetch(`/api/github/validate?id=${encodeURIComponent(githubId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   /**
    * 분석 요청 생성 (UC-02)
-   * TODO: POST /api/analysis/request  body: { githubId }
+   * POST /api/analysis/request  body: { githubId }
    * @param {string} githubId
    * @returns {Promise<{requestId: string, estimatedSeconds: number}>}
    */
   createAnalysisRequest: async (githubId) => {
-    // --- STUB ---
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ requestId: 'REQ-' + Date.now(), estimatedSeconds: 30 });
-      }, 400);
+    const res = await fetch('/api/analysis/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ githubId }),
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   /**
    * 분석 진행 상태 조회 (UC-03 ~ UC-05 Progress)
-   * TODO: GET /api/analysis/status/{requestId}
+   * GET /api/analysis/status/{requestId}
    * @param {string} requestId
    * @returns {Promise<{step: 1|2|3, stepStatus: 'running'|'done'|'error', overallPct: number, detail?: string}>}
    */
   getAnalysisStatus: async (requestId) => {
-    // --- STUB: 5초마다 step 증가 시뮬레이션 ---
-    const elapsed = (Date.now() - Number(requestId.split('-')[1])) / 1000;
-    if (elapsed < 5)  return { step: 1, stepStatus: 'running', overallPct: Math.min(30, elapsed * 6), detail: '저장소 목록 조회 중...' };
-    if (elapsed < 10) return { step: 2, stepStatus: 'running', overallPct: Math.min(65, 30 + (elapsed - 5) * 7), detail: '지표 계산 중...' };
-    if (elapsed < 14) return { step: 3, stepStatus: 'running', overallPct: Math.min(95, 65 + (elapsed - 10) * 7.5), detail: '피드백 생성 중...' };
-    return { step: 3, stepStatus: 'done', overallPct: 100, detail: '완료' };
+    const res = await fetch(`/api/analysis/status/${encodeURIComponent(requestId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   /**
    * 분석 결과 조회 (UC-06)
-   * TODO: GET /api/analysis/result/{githubId}
+   * GET /api/analysis/result/{githubId}
    * @param {string} githubId
    * @returns {Promise<AnalysisResult>}
    */
   getAnalysisResult: async (githubId) => {
-    // --- STUB ---
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          githubId,
-          avatarUrl: `https://avatars.githubusercontent.com/${githubId}`,
-          analysisDate: new Date().toISOString(),
-          developerType: 'Junior Developer',
-          totalScore: 72,
-          trustLevel: 'HIGH',
-          summaryText: `${githubId}님의 GitHub 활동을 분석한 결과, 활동성과 기술 다양성이 양호하며 협업 경험을 더 쌓으면 Senior 레벨로 성장할 수 있습니다.`,
-          metrics: {
-            activity:  { score: 80, desc: '주 평균 커밋 빈도 우수' },
-            diversity: { score: 68, desc: '5개 언어 사용, 다양성 양호' },
-            collab:    { score: 55, desc: 'PR/Issue 참여 경험 부족' },
-            persist:   { score: 85, desc: '12개월 연속 활동 유지' },
-          },
-          strengths: [
-            '꾸준한 커밋 습관 – 월 평균 40회 이상 커밋',
-            '다양한 언어 경험 (Python, JavaScript, Java 등)',
-            '지속적인 개인 프로젝트 유지 관리',
-          ],
-          improvements: [
-            'Pull Request를 통한 오픈소스 기여 경험 추가',
-            'Issue 코멘트·리뷰 활동으로 협업 이력 강화',
-            '공개 저장소에 README 및 문서 보강',
-            'Fork 후 개선 사항 반영 PR 도전',
-          ],
-        });
-      }, 600);
-    });
+    const res = await fetch(`/api/analysis/result/${encodeURIComponent(githubId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   /**
    * 분석 이력 목록 조회 (UC-08)
-   * TODO: GET /api/analysis/history/{githubId}
+   * GET /api/analysis/history/{githubId}
    * @param {string} githubId
    * @returns {Promise<AnalysisResult[]>}
    */
   getAnalysisHistory: async (githubId) => {
-    // --- STUB ---
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            githubId, analysisDate: '2026-03-01T00:00:00Z',
-            totalScore: 62, developerType: 'Beginner',
-            metrics: { activity: { score: 65 }, diversity: { score: 55 }, collab: { score: 40 }, persist: { score: 70 } },
-          },
-          {
-            githubId, analysisDate: '2026-05-01T00:00:00Z',
-            totalScore: 72, developerType: 'Junior Developer',
-            metrics: { activity: { score: 80 }, diversity: { score: 68 }, collab: { score: 55 }, persist: { score: 85 } },
-          },
-        ]);
-      }, 600);
-    });
+    const res = await fetch(`/api/analysis/history/${encodeURIComponent(githubId)}`);
+    if (res.status === 204) return [];
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  /* ── 취소 ── (STUB 제거 후 실제 API 호출) */
+  cancelAnalysis: async (requestId) => {
+    await fetch(`/api/analysis/cancel/${encodeURIComponent(requestId)}`, { method: 'POST' });
   },
 };
+
+/* ================================================================
+   (하위 호환을 위해 남겨둔 빈 블록 – 실제 데이터는 위 API 객체 사용)
+   ================================================================ */
+
 
 /* ================================================================
    HOME PAGE (index.html) – UC-01, UC-02
@@ -336,7 +300,7 @@ function initProgressPage() {
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
       clearInterval(pollTimer);
-      // TODO: POST /api/analysis/cancel/{requestId}
+      API.cancelAnalysis(requestId).catch(() => {});
       location.href = 'index.html';
     });
   }
