@@ -1,0 +1,285 @@
+package com.github.insight.service;
+
+import com.github.insight.model.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Service
+public class GithubApiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(GithubApiClient.class);
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final String baseUrl = "https://api.github.com";
+
+    @Value("${github.token:}")
+    private String token;
+
+    private final AtomicInteger rateLimitRemaining = new AtomicInteger(5000);
+
+    public ActivityData collectAll(String githubId) {
+        ActivityData data = new ActivityData();
+
+        Map<String, Object> userProfile = fetchUserProfile(githubId);
+        if (userProfile != null) {
+            data.setAvatarUrl((String) userProfile.getOrDefault("avatar_url", ""));
+        }
+
+        List<RepositoryData> repos = getRepositories(githubId);
+        repos.forEach(data::addRepository);
+
+        Map<String, Long> langs = new HashMap<>();
+        for (RepositoryData repo : repos) {
+            if (repo.getLanguage() != null && !repo.getLanguage().isBlank()) {
+                langs.merge(repo.getLanguage(), 1L, Long::sum);
+            }
+        }
+        data.setLanguages(langs);
+
+        List<Map<String, Object>> events = fetchRawEvents(githubId);
+        parseEventsIntoData(events, repos, data);
+
+        data.setCollectedAt(LocalDateTime.now());
+        data.deduplicate();
+        return data;
+    }
+
+    public List<RepositoryData> getRepositories(String githubId) {
+        String url = baseUrl + "/users/" + githubId + "/repos?per_page=100&sort=updated";
+        try {
+            ResponseEntity<List> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), List.class);
+            List<Map<String, Object>> body = resp.getBody();
+            if (body == null) return Collections.emptyList();
+
+            List<RepositoryData> result = new ArrayList<>();
+            for (Map<String, Object> r : body) {
+                RepositoryData repo = new RepositoryData();
+                repo.setRepoId(String.valueOf(r.getOrDefault("full_name", "")));
+                repo.setName(String.valueOf(r.getOrDefault("name", "")));
+                repo.setLanguage((String) r.get("language"));
+                Number stars = (Number) r.getOrDefault("stargazers_count", 0);
+                repo.setStarCount(stars.intValue());
+                repo.setFork(Boolean.TRUE.equals(r.get("fork")));
+                String pushedAt = (String) r.get("pushed_at");
+                if (pushedAt != null) {
+                    try {
+                        repo.setLastUpdatedAt(
+                            Instant.parse(pushedAt).atZone(ZoneOffset.UTC).toLocalDateTime());
+                    } catch (DateTimeParseException ignored) {}
+                }
+                result.add(repo);
+            }
+            updateRateLimit(resp.getHeaders());
+            return result;
+        } catch (Exception e) {
+            log.warn("저장소 조회 실패 ({}): {}", githubId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<CommitData> getCommits(String githubId, String repoName) {
+        String url = baseUrl + "/repos/" + githubId + "/" + repoName
+            + "/commits?per_page=100&author=" + githubId;
+        try {
+            ResponseEntity<List> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), List.class);
+            List<Map<String, Object>> body = resp.getBody();
+            if (body == null) return Collections.emptyList();
+
+            List<CommitData> result = new ArrayList<>();
+            for (Map<String, Object> c : body) {
+                CommitData commit = parseCommit(c, githubId + "/" + repoName);
+                if (commit != null) result.add(commit);
+            }
+            updateRateLimit(resp.getHeaders());
+            return result;
+        } catch (Exception e) {
+            log.warn("커밋 조회 실패 ({}/{}): {}", githubId, repoName, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public Map<String, Long> getLanguages(String githubId, String repoName) {
+        String url = baseUrl + "/repos/" + githubId + "/" + repoName + "/languages";
+        try {
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), Map.class);
+            Map<String, Object> body = resp.getBody();
+            if (body == null) return Collections.emptyMap();
+            Map<String, Long> result = new HashMap<>();
+            body.forEach((k, v) -> result.put(k, ((Number) v).longValue()));
+            return result;
+        } catch (Exception e) {
+            return Collections.emptyMap();
+        }
+    }
+
+    public List<PullRequestData> getPullRequests(String githubId) {
+        return Collections.emptyList();
+    }
+
+    public List<IssueData> getIssues(String githubId) {
+        return Collections.emptyList();
+    }
+
+    public boolean validateUserExists(String githubId) {
+        String url = baseUrl + "/users/" + githubId;
+        try {
+            restTemplate.exchange(url, HttpMethod.GET, buildHeaders(), Map.class);
+            return true;
+        } catch (HttpClientErrorException.NotFound e) {
+            return false;
+        } catch (Exception e) {
+            log.warn("사용자 검증 실패 ({}): {}", githubId, e.getMessage());
+            throw new RuntimeException("GitHub API 오류: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean canMakeRequest() {
+        return rateLimitRemaining.get() > 0;
+    }
+
+    public int getRateLimitStatus() {
+        return rateLimitRemaining.get();
+    }
+
+    private Map<String, Object> fetchUserProfile(String githubId) {
+        String url = baseUrl + "/users/" + githubId;
+        try {
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), Map.class);
+            return resp.getBody();
+        } catch (Exception e) {
+            log.warn("사용자 프로필 조회 실패 ({}): {}", githubId, e.getMessage());
+            return null;
+        }
+    }
+
+    private List<Map<String, Object>> fetchRawEvents(String githubId) {
+        String url = baseUrl + "/users/" + githubId + "/events?per_page=100";
+        try {
+            ResponseEntity<List> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), List.class);
+            updateRateLimit(resp.getHeaders());
+            List<Map<String, Object>> body = resp.getBody();
+            return body != null ? body : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("이벤트 조회 실패 ({}): {}", githubId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void parseEventsIntoData(List<Map<String, Object>> events,
+                                      List<RepositoryData> repos,
+                                      ActivityData data) {
+        Set<String> repoIds = new HashSet<>();
+        repos.forEach(r -> repoIds.add(r.getRepoId()));
+
+        for (Map<String, Object> event : events) {
+            String type = (String) event.get("type");
+            String createdAtStr = (String) event.get("created_at");
+            if (createdAtStr == null) continue;
+
+            LocalDateTime createdAt;
+            try {
+                createdAt = Instant.parse(createdAtStr).atZone(ZoneOffset.UTC).toLocalDateTime();
+            } catch (DateTimeParseException e) {
+                continue;
+            }
+
+            Map<String, Object> repoInfo = (Map<String, Object>) event.get("repo");
+            String repoId = repoInfo != null ? (String) repoInfo.get("name") : "unknown";
+
+            if ("PushEvent".equals(type)) {
+                Map<String, Object> payload = (Map<String, Object>) event.get("payload");
+                if (payload != null) {
+                    List<Map<String, Object>> commits =
+                        (List<Map<String, Object>>) payload.get("commits");
+                    if (commits != null) {
+                        for (Map<String, Object> c : commits) {
+                            String sha = (String) c.getOrDefault("sha", UUID.randomUUID().toString());
+                            String msg = (String) c.getOrDefault("message", "");
+                            data.addCommit(new CommitData(sha, repoId, createdAt, msg));
+                        }
+                    }
+                }
+            } else if ("PullRequestEvent".equals(type)) {
+                Map<String, Object> payload = (Map<String, Object>) event.get("payload");
+                if (payload != null) {
+                    Map<String, Object> pr = (Map<String, Object>) payload.get("pull_request");
+                    if (pr != null) {
+                        String prId = String.valueOf(pr.getOrDefault("id", UUID.randomUUID()));
+                        String state = (String) pr.getOrDefault("state", "open");
+                        boolean merged = Boolean.TRUE.equals(pr.get("merged"));
+                        data.addPullRequest(new PullRequestData(prId, repoId, state,
+                            createdAt, null, merged));
+                    }
+                }
+            } else if ("IssuesEvent".equals(type)) {
+                Map<String, Object> payload = (Map<String, Object>) event.get("payload");
+                if (payload != null) {
+                    Map<String, Object> issue = (Map<String, Object>) payload.get("issue");
+                    if (issue != null) {
+                        String issueId = String.valueOf(issue.getOrDefault("id", UUID.randomUUID()));
+                        String state = (String) issue.getOrDefault("state", "open");
+                        data.addIssue(new IssueData(issueId, repoId, state, createdAt, null));
+                    }
+                }
+            }
+        }
+    }
+
+    private CommitData parseCommit(Map<String, Object> raw, String repoId) {
+        try {
+            String sha = (String) raw.get("sha");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> commit = (Map<String, Object>) raw.get("commit");
+            if (commit == null) return null;
+            String msg = (String) commit.getOrDefault("message", "");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> author = (Map<String, Object>) commit.get("author");
+            String dateStr = author != null ? (String) author.get("date") : null;
+            LocalDateTime date = null;
+            if (dateStr != null) {
+                date = Instant.parse(dateStr).atZone(ZoneOffset.UTC).toLocalDateTime();
+            }
+            return new CommitData(sha, repoId, date, msg);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private HttpEntity<?> buildHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/vnd.github.v3+json");
+        if (token != null && !token.isBlank()) {
+            headers.set("Authorization", "Bearer " + token);
+        }
+        return new HttpEntity<>(headers);
+    }
+
+    private void updateRateLimit(org.springframework.http.HttpHeaders headers) {
+        String remaining = headers.getFirst("X-RateLimit-Remaining");
+        if (remaining != null) {
+            try { rateLimitRemaining.set(Integer.parseInt(remaining)); }
+            catch (NumberFormatException ignored) {}
+        }
+    }
+}
