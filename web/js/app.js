@@ -141,11 +141,60 @@ const API = {
   cancelAnalysis: async (requestId) => {
     await fetch(`/api/analysis/cancel/${encodeURIComponent(requestId)}`, { method: 'POST' });
   },
+
+  /** 현재 로그인 사용자 조회 (UC-00) */
+  getMe: async () => {
+    const res = await fetch('/auth/me');
+    if (!res.ok) return { loggedIn: false };
+    return res.json();
+  },
+
+  /** 로그아웃 */
+  logout: async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+  },
 };
 
 /* ================================================================
    (하위 호환을 위해 남겨둔 빈 블록 – 실제 데이터는 위 API 객체 사용)
    ================================================================ */
+
+/* ================================================================
+   인증 UI 공통 – Auth 상태에 따라 헤더 nav 렌더링
+   ================================================================ */
+
+async function initAuthNav() {
+  const authNav = document.getElementById('auth-nav');
+  if (!authNav) return;
+  try {
+    const me = await API.getMe();
+    if (me.loggedIn) {
+      authNav.innerHTML = `
+        <span class="nav-user">
+          <img src="${escapeHtml(me.avatarUrl || '')}" alt="" class="nav-avatar" />
+          <span>${escapeHtml(me.displayName || me.githubId)}</span>
+        </span>
+        <button class="nav-link nav-logout-btn" id="logout-btn">로그아웃</button>`;
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await API.logout();
+        location.reload();
+      });
+    } else {
+      authNav.innerHTML = `<a href="login.html" class="nav-link nav-login-link">로그인</a>`;
+    }
+  } catch (_) {
+    authNav.innerHTML = `<a href="login.html" class="nav-link nav-login-link">로그인</a>`;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 
 /* ================================================================
@@ -658,22 +707,10 @@ function initHistoryPage() {
 }
 
 /* ================================================================
-   공통 – XSS 방어용 HTML 이스케이프
-   ================================================================ */
-function escapeHtml(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/* ================================================================
    진입점 – 현재 페이지 감지 후 초기화
    ================================================================ */
 document.addEventListener('DOMContentLoaded', () => {
+  initAuthNav();
   const path = location.pathname;
 
   if (path.endsWith('index.html') || path.endsWith('/') || path === '') {
