@@ -61,11 +61,12 @@ public class AuthController {
 
         } catch (Exception e) {
             log.error("OAuth 콜백 처리 실패: {}", e.getMessage());
-            response.setHeader("Location", "/?login=error&message=" +
-                java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8));
+            String redirectUrl = "/?login=error&message=" +
+                java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
+            response.setHeader("Location", redirectUrl);
             response.setStatus(HttpServletResponse.SC_FOUND);
             return ResponseEntity.status(302)
-                .header("Location", "/?login=error")
+                .header("Location", redirectUrl)
                 .build();
         }
     }
