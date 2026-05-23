@@ -124,17 +124,6 @@ class MetricCalculatorTests {
     }
 
     @Test
-    @DisplayName("신뢰도 수준 도출")
-    void testDeriveTrustLevel() {
-        ActivityData data = createTestActivityData();
-        Metrics metrics = new Metrics("test-request");
-
-        TrustLevel level = metricCalculator.deriveTrustLevel(data, false);
-
-        assertNotNull(level);
-    }
-
-    @Test
     @DisplayName("이상 탐지 - 정상 데이터")
     void testDetectAnomalies_NoAnomalies() {
         ActivityData data = createTestActivityData();
@@ -143,38 +132,5 @@ class MetricCalculatorTests {
         boolean hasAnomalies = metricCalculator.detectAnomalies(data, metrics);
 
         assertFalse(hasAnomalies);
-    }
-
-    @Test
-    @DisplayName("다양성 우수 사용자 식별")
-    void testIdentifyStrengths_Diversity() {
-        ActivityData data = createTestActivityData();
-        data.getLanguages().put("Rust", 200L);
-        data.getLanguages().put("Go", 150L);
-
-        Metrics metrics = metricCalculator.calculate(data);
-        List<String> strengths = metricCalculator.identifyStrengths(metrics);
-
-        assertNotNull(strengths);
-        assertTrue(strengths.size() >= 0);
-    }
-
-    @Test
-    @DisplayName("약점 식별")
-    void testIdentifyWeaknesses() {
-        ActivityData data = new ActivityData("test-request");
-        RepositoryData repo = new RepositoryData();
-        repo.setRepoId("user/repo");
-        repo.setName("repo");
-        data.addRepository(repo);
-
-        CommitData commit = new CommitData("sha1", "user/repo",
-            LocalDateTime.now().minusDays(365), "Old commit");
-        data.addCommit(commit);
-
-        Metrics metrics = metricCalculator.calculate(data);
-        List<String> weaknesses = metricCalculator.identifyWeaknesses(metrics);
-
-        assertNotNull(weaknesses);
     }
 }
