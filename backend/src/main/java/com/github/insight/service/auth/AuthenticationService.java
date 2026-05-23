@@ -34,14 +34,30 @@ public class AuthenticationService {
     /** state → timestamp (CSRF 방어) */
     private final Map<String, LocalDateTime> pendingStates = new ConcurrentHashMap<>();
 
+    /** 동시 허용 최대 pending state 수 (봇/반복 요청 방어) */
+    private static final int MAX_PENDING_STATES = 500;
+
+    /** state 만료 시간(분) */
+    private static final int STATE_EXPIRY_MINUTES = 10;
+
     public AuthenticationService(OAuthClient oauthClient) {
         this.oauthClient = oauthClient;
     }
 
     public String initiateOAuthFlow() {
+        purgeExpiredStates();
+        if (pendingStates.size() >= MAX_PENDING_STATES) {
+            throw new IllegalStateException("현재 너무 많은 로그인 요청이 진행 중입니다. 잠시 후 다시 시도하세요.");
+        }
         String state = UUID.randomUUID().toString();
         pendingStates.put(state, LocalDateTime.now());
         return oauthClient.getAuthorizationUrl(state);
+    }
+
+    /** 만료된 pending state를 일괄 제거한다. */
+    private void purgeExpiredStates() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(STATE_EXPIRY_MINUTES);
+        pendingStates.entrySet().removeIf(entry -> entry.getValue().isBefore(cutoff));
     }
 
     public User handleOAuthCallback(String code, String state) {
@@ -115,6 +131,6 @@ public class AuthenticationService {
     private boolean validateState(String state) {
         LocalDateTime created = pendingStates.get(state);
         if (created == null) return false;
-        return created.plusMinutes(10).isAfter(LocalDateTime.now());
+        return created.plusMinutes(STATE_EXPIRY_MINUTES).isAfter(LocalDateTime.now());
     }
 }

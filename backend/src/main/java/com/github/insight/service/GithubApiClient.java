@@ -18,6 +18,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class GithubApiClient {
@@ -31,8 +32,11 @@ public class GithubApiClient {
     private String token;
 
     private final AtomicInteger rateLimitRemaining = new AtomicInteger(5000);
+    /** GitHub X-RateLimit-Reset 헤더값 (Unix epoch 초 단위) */
+    private final AtomicLong rateLimitResetEpoch = new AtomicLong(0L);
 
     public ActivityData collectAll(String githubId) {
+        checkRateLimit();
         ActivityData data = new ActivityData();
 
         Map<String, Object> userProfile = fetchUserProfile(githubId);
@@ -88,6 +92,7 @@ public class GithubApiClient {
             updateRateLimit(resp.getHeaders());
             return result;
         } catch (Exception e) {
+            extractAndThrow429(e);
             log.warn("저장소 조회 실패 ({}): {}", githubId, e.getMessage());
             return Collections.emptyList();
         }
@@ -110,6 +115,7 @@ public class GithubApiClient {
             updateRateLimit(resp.getHeaders());
             return result;
         } catch (Exception e) {
+            extractAndThrow429(e);
             log.warn("커밋 조회 실패 ({}/{}): {}", githubId, repoName, e.getMessage());
             return Collections.emptyList();
         }
@@ -146,17 +152,48 @@ public class GithubApiClient {
         } catch (HttpClientErrorException.NotFound e) {
             return false;
         } catch (Exception e) {
+            extractAndThrow429(e);
             log.warn("사용자 검증 실패 ({}): {}", githubId, e.getMessage());
             throw new RuntimeException("GitHub API 오류: " + e.getMessage(), e);
         }
     }
 
     public boolean canMakeRequest() {
-        return rateLimitRemaining.get() > 0;
+        if (rateLimitRemaining.get() > 0) return true;
+        // reset 시간이 지났거나 알 수 없으면 허용
+        long resetAt = rateLimitResetEpoch.get();
+        return resetAt == 0L || Instant.now().getEpochSecond() >= resetAt;
     }
 
     public int getRateLimitStatus() {
         return rateLimitRemaining.get();
+    }
+
+    /** Rate Limit 초과 시 IllegalStateException 발생 */
+    private void checkRateLimit() {
+        if (!canMakeRequest()) {
+            long secondsUntilReset = rateLimitResetEpoch.get() - Instant.now().getEpochSecond();
+            throw new IllegalStateException(String.format(
+                "GitHub API Rate Limit 초과. %d초 후 재시도 가능합니다.", Math.max(secondsUntilReset, 0)));
+        }
+    }
+
+    /** 예외가 429이면 rateLimitResetEpoch를 갱신하고 IllegalStateException으로 전환 */
+    private void extractAndThrow429(Exception e) {
+        if (e instanceof HttpClientErrorException hce && hce.getStatusCode().value() == 429) {
+            rateLimitRemaining.set(0);
+            org.springframework.http.HttpHeaders respHeaders = hce.getResponseHeaders();
+            if (respHeaders != null) {
+                String reset = respHeaders.getFirst("X-RateLimit-Reset");
+                if (reset != null) {
+                    try { rateLimitResetEpoch.set(Long.parseLong(reset)); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+            long secondsUntilReset = rateLimitResetEpoch.get() - Instant.now().getEpochSecond();
+            throw new IllegalStateException(String.format(
+                "GitHub API Rate Limit 초과. %d초 후 재시도 가능합니다.", Math.max(secondsUntilReset, 0)));
+        }
     }
 
     private Map<String, Object> fetchUserProfile(String githubId) {
@@ -180,6 +217,7 @@ public class GithubApiClient {
             List<Map<String, Object>> body = resp.getBody();
             return body != null ? body : Collections.emptyList();
         } catch (Exception e) {
+            extractAndThrow429(e);
             log.warn("이벤트 조회 실패 ({}): {}", githubId, e.getMessage());
             return Collections.emptyList();
         }
@@ -280,6 +318,14 @@ public class GithubApiClient {
         if (remaining != null) {
             try { rateLimitRemaining.set(Integer.parseInt(remaining)); }
             catch (NumberFormatException ignored) {}
+        }
+        String reset = headers.getFirst("X-RateLimit-Reset");
+        if (reset != null) {
+            try { rateLimitResetEpoch.set(Long.parseLong(reset)); }
+            catch (NumberFormatException ignored) {}
+        }
+        if (rateLimitRemaining.get() == 0) {
+            log.warn("GitHub API Rate Limit 소진. 재설정 시각 epoch={}", rateLimitResetEpoch.get());
         }
     }
 }

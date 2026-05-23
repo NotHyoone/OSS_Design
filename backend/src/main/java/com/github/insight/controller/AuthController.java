@@ -34,10 +34,15 @@ public class AuthController {
                     "GITHUB_OAUTH_CLIENT_ID와 GITHUB_OAUTH_CLIENT_SECRET 환경변수를 설정하세요."
             ));
         }
-        String redirectUrl = authService.initiateOAuthFlow();
-        response.setHeader("Location", redirectUrl);
-        response.setStatus(HttpServletResponse.SC_FOUND);
-        return ResponseEntity.status(302).header("Location", redirectUrl).build();
+        try {
+            String redirectUrl = authService.initiateOAuthFlow();
+            response.setHeader("Location", redirectUrl);
+            response.setStatus(HttpServletResponse.SC_FOUND);
+            return ResponseEntity.status(302).header("Location", redirectUrl).build();
+        } catch (IllegalStateException e) {
+            log.warn("로그인 요청 과부하: {}", e.getMessage());
+            return ResponseEntity.status(429).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /** GitHub OAuth 콜백 처리 */

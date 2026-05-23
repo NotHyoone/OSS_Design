@@ -4,14 +4,27 @@ import com.github.insight.model.AnalysisRequest;
 import com.github.insight.model.AnalysisResult;
 import com.github.insight.model.Metrics;
 import com.github.insight.model.enums.RequestStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
 public class AnalysisRepository {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisRepository.class);
+
+    /** 완료/실패 request 보존 시간 (시간) */
+    private static final int MAX_REQUEST_TTL_HOURS = 24;
+    /** result/metrics 보존 시간 (시간) */
+    private static final int MAX_RESULT_TTL_HOURS  = 72;
+    /** githubId·userId별 최대 이력 보존 건수 */
+    private static final int MAX_HISTORY_PER_USER  = 10;
 
     private final Map<String, AnalysisRequest> requestStore = new ConcurrentHashMap<>();
     private final Map<String, AnalysisResult> resultStore = new ConcurrentHashMap<>();
@@ -132,5 +145,49 @@ public class AnalysisRepository {
             .mapToInt(AnalysisResult::getTotalScore).average().orElse(0);
         stats.put("averageScore", Math.round(avgScore * 10) / 10.0);
         return stats;
+    }
+
+    /**
+     * 1시간마다 만료된 데이터를 정리한다.
+     * - requestStore: 완료/실패 후 24시간 경과한 항목 제거
+     * - resultStore/metricsStore: 72시간 경과한 항목 제거
+     * - githubIdHistory/userResultHistory: 사용자별 최대 10건 초과분 제거
+     */
+    @Scheduled(fixedDelay = 3_600_000)
+    public void purgeExpired() {
+        LocalDateTime requestCutoff = LocalDateTime.now().minusHours(MAX_REQUEST_TTL_HOURS);
+        LocalDateTime resultCutoff  = LocalDateTime.now().minusHours(MAX_RESULT_TTL_HOURS);
+
+        // 1. 완료/실패된 오래된 request 제거
+        List<String> staleRequestIds = requestStore.values().stream()
+            .filter(r -> !r.isRunning() && r.getRequestedAt().isBefore(requestCutoff))
+            .map(AnalysisRequest::getRequestId)
+            .collect(Collectors.toList());
+        staleRequestIds.forEach(requestStore::remove);
+
+        // 2. 오래된 result + metrics 제거
+        List<String> staleResultIds = resultStore.values().stream()
+            .filter(r -> r.getCreatedAt() != null && r.getCreatedAt().isBefore(resultCutoff))
+            .map(AnalysisResult::getRequestId)
+            .collect(Collectors.toList());
+        staleResultIds.forEach(id -> {
+            resultStore.remove(id);
+            metricsStore.remove(id);
+        });
+
+        // 3. 이력 목록 최대 건수 초과분 제거
+        githubIdHistory.forEach((id, list) -> {
+            if (list.size() > MAX_HISTORY_PER_USER) {
+                list.subList(MAX_HISTORY_PER_USER, list.size()).clear();
+            }
+        });
+        userResultHistory.forEach((id, list) -> {
+            if (list.size() > MAX_HISTORY_PER_USER) {
+                list.subList(MAX_HISTORY_PER_USER, list.size()).clear();
+            }
+        });
+
+        log.info("정기 정리 완료: request {}건, result {}건 제거",
+            staleRequestIds.size(), staleResultIds.size());
     }
 }
