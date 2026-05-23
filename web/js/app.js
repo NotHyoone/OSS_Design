@@ -428,6 +428,14 @@ function initResultPage() {
   const params   = getParams();
   const githubId = params.get('id') || 'username';
 
+  /* 이력 비교 버튼 (UC-08) */
+  const historyBtn = document.getElementById('btn-history');
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      location.href = `history.html?id=${encodeURIComponent(githubId)}`;
+    });
+  }
+
   /* 결과 데이터 로드 */
   API.getAnalysisResult(githubId).then((result) => {
     renderResult(result);
@@ -568,38 +576,56 @@ function initHistoryPage() {
   const historyList   = document.getElementById('history-list');
   const emptyState    = document.getElementById('empty-state');
 
-  // TODO: 실제 환경에서는 로그인된 사용자 ID를 세션/쿠키에서 읽어옴
-  const githubId = getParams().get('id') || 'demo-user';
-
   let historyData = [];
 
-  /* 이력 데이터 로드 */
-  API.getAnalysisHistory(githubId).then((history) => {
-    historyData = history;
+  /* GitHub ID 취득 – URL 파라미터 또는 현재 로그인 사용자 */
+  let githubId = getParams().get('id');
 
-    // 이력 2건 미만 – 빈 상태 (UC-08 Preconditions)
-    if (history.length < 2) {
-      compareControls.classList.add('hidden');
-      emptyState?.classList.remove('hidden');
-      return;
+  async function loadHistoryData() {
+    if (!githubId) {
+      try {
+        const me = await API.getMe();
+        if (!me.loggedIn) {
+          showError('로그인이 필요합니다.');
+          return;
+        }
+        githubId = me.githubId;
+      } catch {
+        showError('사용자 정보를 불러올 수 없습니다.');
+        return;
+      }
     }
 
-    /* 셀렉트 옵션 생성 */
-    history.forEach((item, idx) => {
-      const label = `${formatDate(item.analysisDate)} (점수: ${item.totalScore})`;
-      baseSelect.add(new Option(label, idx));
-      compareSelect.add(new Option(label, idx));
-    });
-    /* 기본: 첫 번째 vs 마지막 */
-    baseSelect.value    = '0';
-    compareSelect.value = String(history.length - 1);
-    compareBtn.disabled = false;
+    /* 이력 데이터 로드 */
+    API.getAnalysisHistory(githubId).then((history) => {
+      historyData = history;
 
-    /* 이력 목록 렌더링 */
-    renderHistoryList(history);
-  }).catch((error) => {
-    showError('분석 이력을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
-  });
+      // 이력 2건 미만 – 빈 상태 (UC-08 Preconditions)
+      if (history.length < 2) {
+        compareControls.classList.add('hidden');
+        emptyState?.classList.remove('hidden');
+        return;
+      }
+
+      /* 셀렉트 옵션 생성 */
+      history.forEach((item, idx) => {
+        const label = `${formatDate(item.analysisDate)} (점수: ${item.totalScore})`;
+        baseSelect.add(new Option(label, idx));
+        compareSelect.add(new Option(label, idx));
+      });
+      /* 기본: 첫 번째 vs 마지막 */
+      baseSelect.value    = '0';
+      compareSelect.value = String(history.length - 1);
+      compareBtn.disabled = false;
+
+      /* 이력 목록 렌더링 */
+      renderHistoryList(history);
+    }).catch((error) => {
+      showError('분석 이력을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
+    });
+  }
+
+  loadHistoryData();
 
   /* 오류 상태 표시 */
   function showError(message) {
