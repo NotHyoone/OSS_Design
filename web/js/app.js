@@ -427,9 +427,28 @@ function initResultPage() {
   /* PDF 다운로드 버튼 (UC-07) */
   const pdfBtn = document.getElementById('btn-pdf');
   if (pdfBtn) {
-    pdfBtn.addEventListener('click', () => {
-      // TODO: POST /api/report/pdf/{githubId}  → blob 다운로드
-      alert(`PDF 다운로드 기능은 백엔드 구현 후 활성화됩니다.\n파일명: ${githubId}_Analysis_${formatDate(new Date()).replace(/-/g, '')}.pdf`);
+    pdfBtn.addEventListener('click', async () => {
+      pdfBtn.disabled = true;
+      pdfBtn.textContent = '다운로드 중...';
+      try {
+        const response = await fetch(`/api/analysis/report/${encodeURIComponent(githubId)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${githubId}_Analysis_${formatDate(new Date()).replace(/-/g, '')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        alert('PDF 다운로드에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      } finally {
+        pdfBtn.disabled = false;
+        pdfBtn.textContent = '⬇️ PDF 다운로드';
+      }
     });
   }
 
