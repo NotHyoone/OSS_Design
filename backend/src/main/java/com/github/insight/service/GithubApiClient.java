@@ -140,11 +140,105 @@ public class GithubApiClient {
     }
 
     public List<PullRequestData> getPullRequests(String githubId) {
-        return Collections.emptyList();
+        String url = baseUrl + "/search/issues?q=author:" + githubId
+            + "+type:pr&sort=updated&order=desc&per_page=100";
+        try {
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), Map.class);
+            updateRateLimit(resp.getHeaders());
+            Map<String, Object> body = resp.getBody();
+            if (body == null) return Collections.emptyList();
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+            if (items == null) return Collections.emptyList();
+
+            List<PullRequestData> result = new ArrayList<>();
+            for (Map<String, Object> item : items) {
+                PullRequestData pr = new PullRequestData();
+                pr.setPrId(String.valueOf(item.getOrDefault("id", UUID.randomUUID())));
+
+                @SuppressWarnings("unchecked")
+                Map<String, Object> repoInfo = (Map<String, Object>) item.get("repository_url");
+                String repoName = repoInfo != null ? (String) repoInfo.get("name")
+                    : String.valueOf(item.getOrDefault("repository_url", ""));
+                pr.setRepoId(repoName);
+
+                pr.setState((String) item.getOrDefault("state", "open"));
+
+                String createdAtStr = (String) item.get("created_at");
+                if (createdAtStr != null) {
+                    try {
+                        pr.setCreatedAt(Instant.parse(createdAtStr).atZone(ZoneOffset.UTC).toLocalDateTime());
+                    } catch (DateTimeParseException ignored) {}
+                }
+
+                String closedAtStr = (String) item.get("closed_at");
+                if (closedAtStr != null) {
+                    try {
+                        pr.setClosedAt(Instant.parse(closedAtStr).atZone(ZoneOffset.UTC).toLocalDateTime());
+                    } catch (DateTimeParseException ignored) {}
+                }
+
+                pr.setMerged(item.get("pull_request") != null);
+                result.add(pr);
+            }
+            return result;
+        } catch (Exception e) {
+            extractAndThrow429(e);
+            log.warn("Pull Request 조회 실패 ({}): {}", githubId, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     public List<IssueData> getIssues(String githubId) {
-        return Collections.emptyList();
+        String url = baseUrl + "/search/issues?q=author:" + githubId
+            + "+type:issue&sort=updated&order=desc&per_page=100";
+        try {
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                url, HttpMethod.GET, buildHeaders(), Map.class);
+            updateRateLimit(resp.getHeaders());
+            Map<String, Object> body = resp.getBody();
+            if (body == null) return Collections.emptyList();
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+            if (items == null) return Collections.emptyList();
+
+            List<IssueData> result = new ArrayList<>();
+            for (Map<String, Object> item : items) {
+                IssueData issue = new IssueData();
+                issue.setIssueId(String.valueOf(item.getOrDefault("id", UUID.randomUUID())));
+
+                String repoUrl = (String) item.get("repository_url");
+                String repoName = repoUrl != null && repoUrl.contains("/")
+                    ? repoUrl.substring(repoUrl.lastIndexOf("/") + 1) : "unknown";
+                issue.setRepoId(repoName);
+
+                issue.setState((String) item.getOrDefault("state", "open"));
+
+                String createdAtStr = (String) item.get("created_at");
+                if (createdAtStr != null) {
+                    try {
+                        issue.setCreatedAt(Instant.parse(createdAtStr).atZone(ZoneOffset.UTC).toLocalDateTime());
+                    } catch (DateTimeParseException ignored) {}
+                }
+
+                String closedAtStr = (String) item.get("closed_at");
+                if (closedAtStr != null) {
+                    try {
+                        issue.setClosedAt(Instant.parse(closedAtStr).atZone(ZoneOffset.UTC).toLocalDateTime());
+                    } catch (DateTimeParseException ignored) {}
+                }
+
+                result.add(issue);
+            }
+            return result;
+        } catch (Exception e) {
+            extractAndThrow429(e);
+            log.warn("Issue 조회 실패 ({}): {}", githubId, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     public boolean validateUserExists(String githubId) {

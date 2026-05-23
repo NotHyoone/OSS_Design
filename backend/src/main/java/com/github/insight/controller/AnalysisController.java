@@ -86,7 +86,13 @@ public class AnalysisController {
 
     /** 분석 결과 조회 (UC-06) */
     @GetMapping("/result/{githubId}")
-    public ResponseEntity<Map<String, Object>> getResult(@PathVariable String githubId) {
+    public ResponseEntity<?> getResult(
+            @PathVariable String githubId,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        if (sessionId == null || authenticationService.getUserBySession(sessionId).isEmpty()) {
+            return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+
         Optional<AnalysisResult> resultOpt = analysisService.getLatestResult(githubId);
         if (resultOpt.isEmpty()) return ResponseEntity.notFound().build();
 
@@ -98,7 +104,13 @@ public class AnalysisController {
 
     /** 분석 이력 목록 조회 (UC-08) */
     @GetMapping("/history/{githubId}")
-    public ResponseEntity<List<Map<String, Object>>> getHistory(@PathVariable String githubId) {
+    public ResponseEntity<?> getHistory(
+            @PathVariable String githubId,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        if (sessionId == null || authenticationService.getUserBySession(sessionId).isEmpty()) {
+            return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+
         List<AnalysisResult> list = analysisService.getHistory(githubId);
         if (list.isEmpty()) return ResponseEntity.noContent().build();
 
@@ -113,7 +125,13 @@ public class AnalysisController {
 
     /** PDF 다운로드 (UC-07) */
     @GetMapping("/report/{githubId}")
-    public ResponseEntity<byte[]> downloadReport(@PathVariable String githubId) {
+    public ResponseEntity<?> downloadReport(
+            @PathVariable String githubId,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        if (sessionId == null || authenticationService.getUserBySession(sessionId).isEmpty()) {
+            return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+
         Optional<AnalysisResult> resultOpt = analysisService.getLatestResult(githubId);
         if (resultOpt.isEmpty()) return ResponseEntity.notFound().build();
 
