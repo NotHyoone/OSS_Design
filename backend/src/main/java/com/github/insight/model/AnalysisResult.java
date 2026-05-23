@@ -40,8 +40,10 @@ public class AnalysisResult {
 
     public boolean validate() {
         return totalScore >= 0 && totalScore <= 100
+            && githubId != null && !githubId.isBlank()
             && developerType != null
-            && strengths != null
+            && trustLevel != null
+            && strengths != null && !strengths.isEmpty()
             && improvements != null && !improvements.isEmpty();
     }
 
