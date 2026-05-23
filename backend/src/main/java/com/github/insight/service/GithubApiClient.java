@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -64,7 +66,8 @@ public class GithubApiClient {
     }
 
     public List<RepositoryData> getRepositories(String githubId) {
-        String url = baseUrl + "/users/" + githubId + "/repos?per_page=100&sort=updated";
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String url = baseUrl + "/users/" + encodedId + "/repos?per_page=100&sort=updated";
         try {
             ResponseEntity<List> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), List.class);
@@ -101,8 +104,10 @@ public class GithubApiClient {
     }
 
     public List<CommitData> getCommits(String githubId, String repoName) {
-        String url = baseUrl + "/repos/" + githubId + "/" + repoName
-            + "/commits?per_page=100&author=" + githubId;
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String encodedRepo = URLEncoder.encode(repoName, StandardCharsets.UTF_8);
+        String url = baseUrl + "/repos/" + encodedId + "/" + encodedRepo
+            + "/commits?per_page=100&author=" + encodedId;
         try {
             ResponseEntity<List> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), List.class);
@@ -124,7 +129,9 @@ public class GithubApiClient {
     }
 
     public Map<String, Long> getLanguages(String githubId, String repoName) {
-        String url = baseUrl + "/repos/" + githubId + "/" + repoName + "/languages";
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String encodedRepo = URLEncoder.encode(repoName, StandardCharsets.UTF_8);
+        String url = baseUrl + "/repos/" + encodedId + "/" + encodedRepo + "/languages";
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), Map.class);
@@ -142,7 +149,8 @@ public class GithubApiClient {
     }
 
     public List<PullRequestData> getPullRequests(String githubId) {
-        String url = baseUrl + "/search/issues?q=author:" + githubId
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String url = baseUrl + "/search/issues?q=author:" + encodedId
             + "+type:pr&sort=updated&order=desc&per_page=100";
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(
@@ -194,7 +202,8 @@ public class GithubApiClient {
     }
 
     public List<IssueData> getIssues(String githubId) {
-        String url = baseUrl + "/search/issues?q=author:" + githubId
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String url = baseUrl + "/search/issues?q=author:" + encodedId
             + "+type:issue&sort=updated&order=desc&per_page=100";
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(
@@ -244,7 +253,8 @@ public class GithubApiClient {
     }
 
     public boolean validateUserExists(String githubId) {
-        String url = baseUrl + "/users/" + githubId;
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String url = baseUrl + "/users/" + encodedId;
         try {
             restTemplate.exchange(url, HttpMethod.GET, buildHeaders(), Map.class);
             return true;
@@ -299,7 +309,8 @@ public class GithubApiClient {
     }
 
     private Map<String, Object> fetchUserProfile(String githubId) {
-        String url = baseUrl + "/users/" + githubId;
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String url = baseUrl + "/users/" + encodedId;
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), Map.class);
@@ -313,7 +324,8 @@ public class GithubApiClient {
     }
 
     private List<Map<String, Object>> fetchRawEvents(String githubId) {
-        String url = baseUrl + "/users/" + githubId + "/events?per_page=100";
+        String encodedId = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
+        String url = baseUrl + "/users/" + encodedId + "/events?per_page=100";
         try {
             ResponseEntity<List> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), List.class);
