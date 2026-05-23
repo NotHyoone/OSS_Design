@@ -38,11 +38,7 @@ public class GithubController {
         try {
             boolean exists = githubApiClient.validateUserExists(id);
             if (exists) {
-                com.github.insight.model.ActivityData preview = new com.github.insight.model.ActivityData();
-                java.util.List<com.github.insight.model.RepositoryData> repos =
-                    githubApiClient.getRepositories(id);
-                String avatarUrl = repos.isEmpty() ? null :
-                    "https://avatars.githubusercontent.com/" + id;
+                String avatarUrl = "https://avatars.githubusercontent.com/" + id;
                 return ResponseEntity.ok(new ValidateResponse(true, avatarUrl, null));
             } else {
                 return ResponseEntity.ok(
