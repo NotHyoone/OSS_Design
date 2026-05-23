@@ -21,6 +21,14 @@
     <java.version>17</java.version>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>itext-releases</id>
+      <name>iText Releases</name>
+      <url>https://repo.itextsupport.com/releases</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <!-- Spring Web (REST API + 정적 리소스 서빙) -->
     <dependency>
@@ -45,13 +53,6 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
-    </dependency>
-
-    <!-- iText PDF 생성 -->
-    <dependency>
-      <groupId>com.itextpdf</groupId>
-      <artifactId>itext-core</artifactId>
-      <version>8.0.3</version>
     </dependency>
 
     <!-- H2 임베디드 데이터베이스 (로컬 개발용) -->
