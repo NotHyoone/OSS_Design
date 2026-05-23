@@ -338,12 +338,23 @@ function initProgressPage() {
 
       if (status.stepStatus === 'error') {
         clearInterval(pollTimer);
-        showRateLimitNotice(true);
+        showError('GitHub API 요청 중 오류가 발생했습니다. 다시 시도해 주세요.');
       }
     } catch {
       /* 네트워크 오류 – 폴링 유지 */
     }
   }, 2000);
+
+  /* 오류 상태 표시 */
+  function showError(message) {
+    const errorEl = document.getElementById('error-notice');
+    const msgEl = document.getElementById('error-message');
+    if (errorEl && msgEl) {
+      msgEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+    if (cancelBtn) cancelBtn.hidden = true;
+  }
 
   /* 취소 버튼 (UC-02 1a.3) */
   if (cancelBtn) {
@@ -420,9 +431,21 @@ function initResultPage() {
   /* 결과 데이터 로드 */
   API.getAnalysisResult(githubId).then((result) => {
     renderResult(result);
-  }).catch(() => {
-    // TODO: 오류 상태 UI 표시
+  }).catch((error) => {
+    showError('분석 결과를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
   });
+
+  /* 오류 상태 표시 */
+  function showError(message) {
+    const errorEl = document.getElementById('error-notice');
+    const msgEl = document.getElementById('error-message');
+    if (errorEl && msgEl) {
+      msgEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+    const resultSection = document.querySelector('.result-header');
+    if (resultSection) resultSection.classList.add('hidden');
+  }
 
   /* PDF 다운로드 버튼 (UC-07) */
   const pdfBtn = document.getElementById('btn-pdf');
@@ -574,9 +597,21 @@ function initHistoryPage() {
 
     /* 이력 목록 렌더링 */
     renderHistoryList(history);
-  }).catch(() => {
-    // TODO: 오류 상태 UI
+  }).catch((error) => {
+    showError('분석 이력을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
   });
+
+  /* 오류 상태 표시 */
+  function showError(message) {
+    const errorEl = document.getElementById('error-notice');
+    const msgEl = document.getElementById('error-message');
+    if (errorEl && msgEl) {
+      msgEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+    compareControls.classList.add('hidden');
+    historyList.classList.add('hidden');
+  }
 
   /* 셀렉트 변경 – 같은 시점 선택 방지 */
   [baseSelect, compareSelect].forEach((sel) => {

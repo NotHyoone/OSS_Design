@@ -89,6 +89,13 @@
           <span class="notice-msg">GitHub API Rate Limit 감지 – 자동 재시도 중 (<span id="retry-count">1</span>/3)</span>
         </div>
 
+        <!-- Error Notice -->
+        <div class="notice-box notice--error hidden" id="error-notice" role="alert" aria-live="assertive">
+          <span class="notice-icon">❌</span>
+          <span class="notice-msg" id="error-message">분석 중 오류가 발생했습니다.</span>
+          <a href="index.html" class="btn btn-ghost" style="margin-top: 12px;">새 분석 시작</a>
+        </div>
+
         <!-- Cancel Button -->
         <button class="btn btn-ghost btn-full" id="cancel-btn">분석 취소</button>
       </div>

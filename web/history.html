@@ -31,6 +31,13 @@
         <p class="page-desc">두 시점의 분석 결과를 비교해 역량 변화 추세를 확인하세요.</p>
       </section>
 
+      <!-- Error State (API Failure) -->
+      <div class="notice-box notice--error hidden" id="error-notice" role="alert" aria-live="assertive">
+        <span class="notice-icon">❌</span>
+        <span class="notice-msg" id="error-message">분석 이력을 불러올 수 없습니다.</span>
+        <a href="index.html" class="btn btn-ghost" style="margin-top: 12px;">홈으로 이동</a>
+      </div>
+
       <!-- No History Warning (UC-08 1a) -->
       <div class="empty-state hidden" id="empty-state" role="status">
         <span class="empty-icon" aria-hidden="true">📭</span>

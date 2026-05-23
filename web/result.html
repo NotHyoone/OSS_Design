@@ -52,6 +52,13 @@
         <span class="notice-msg">데이터 일부 누락으로 인해 <strong>부분 분석</strong> 결과입니다. 일부 지표의 신뢰도가 낮을 수 있습니다.</span>
       </div>
 
+      <!-- Error State (API Failure) -->
+      <div class="notice-box notice--error hidden" id="error-notice" role="alert" aria-live="assertive">
+        <span class="notice-icon">❌</span>
+        <span class="notice-msg" id="error-message">분석 결과를 불러올 수 없습니다.</span>
+        <a href="index.html" class="btn btn-ghost" style="margin-top: 12px;">새 분석 시작</a>
+      </div>
+
       <!-- ── Score Section ── -->
       <section class="section-padding" aria-labelledby="score-heading">
         <h2 class="section-title" id="score-heading">종합 역량 점수</h2>
