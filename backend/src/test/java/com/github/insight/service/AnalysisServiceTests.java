@@ -65,8 +65,7 @@ class AnalysisServiceTests {
         String githubId = "testuser";
         when(analysisRepository.findActiveRequestId(githubId))
                 .thenReturn(Optional.empty());
-        when(analysisRepository.save(any()))
-                .thenReturn(null);
+        doNothing().when(analysisRepository).save(any());
 
         AnalysisRequest result = analysisService.requestAnalysis(null, githubId);
 
@@ -81,7 +80,7 @@ class AnalysisServiceTests {
         String githubId = "testuser";
         String requestId = "req-123";
 
-        AnalysisRequest existing = new AnalysisRequest("req-123", null, githubId);
+        AnalysisRequest existing = new AnalysisRequest("user-123", githubId);
         existing.transitionTo(RequestStatus.RUNNING);
 
         when(analysisRepository.findActiveRequestId(githubId))
@@ -99,7 +98,7 @@ class AnalysisServiceTests {
     @DisplayName("분석 상태 조회 - 존재하는 요청")
     void testGetRequest_Success() {
         String requestId = "req-123";
-        AnalysisRequest request = new AnalysisRequest(requestId, null, "testuser");
+        AnalysisRequest request = new AnalysisRequest("user-123", "testuser");
 
         when(analysisRepository.findById(requestId))
                 .thenReturn(request);
@@ -162,7 +161,7 @@ class AnalysisServiceTests {
     @DisplayName("분석 요청 취소")
     void testCancel_Success() {
         String requestId = "req-123";
-        AnalysisRequest request = new AnalysisRequest(requestId, null, "testuser");
+        AnalysisRequest request = new AnalysisRequest("user-123", "testuser");
         request.transitionTo(RequestStatus.RUNNING);
 
         when(analysisRepository.findById(requestId))
@@ -221,7 +220,7 @@ class AnalysisServiceTests {
     @DisplayName("재시도 가능한 분석 재실행")
     void testRetryFailedAnalysis() {
         String requestId = "req-123";
-        AnalysisRequest request = new AnalysisRequest(requestId, null, "testuser");
+        AnalysisRequest request = new AnalysisRequest("user-123", "testuser");
         request.transitionTo(RequestStatus.FAILED);
 
         when(analysisRepository.findById(requestId))
