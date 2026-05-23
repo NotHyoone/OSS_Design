@@ -56,6 +56,7 @@ public class AuthController {
 
             Cookie sessionCookie = new Cookie("SESSION_ID", user.getSessionId());
             sessionCookie.setHttpOnly(true);
+            sessionCookie.setSecure(true);
             sessionCookie.setPath("/");
             sessionCookie.setMaxAge(1800); // 30분
             response.addCookie(sessionCookie);
@@ -107,6 +108,7 @@ public class AuthController {
         }
         Cookie expiredCookie = new Cookie("SESSION_ID", "");
         expiredCookie.setHttpOnly(true);
+        expiredCookie.setSecure(true);
         expiredCookie.setPath("/");
         expiredCookie.setMaxAge(0);
         response.addCookie(expiredCookie);
