@@ -4,6 +4,7 @@ import com.github.insight.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -132,5 +133,27 @@ public class AuthenticationService {
         LocalDateTime created = pendingStates.get(state);
         if (created == null) return false;
         return created.plusMinutes(STATE_EXPIRY_MINUTES).isAfter(LocalDateTime.now());
+    }
+
+    /**
+     * 1시간마다 만료된 세션을 정리한다.
+     * - sessions/sessionActivity: sessionTimeoutMinutes 초과 항목 제거
+     */
+    @Scheduled(fixedDelay = 3_600_000)
+    public void purgeExpiredSessions() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(sessionTimeoutMinutes);
+        int removedCount = 0;
+
+        for (String sessionId : sessions.keySet()) {
+            LocalDateTime lastActivity = sessionActivity.get(sessionId);
+            if (lastActivity != null && lastActivity.isBefore(cutoff)) {
+                invalidateSession(sessionId);
+                removedCount++;
+            }
+        }
+
+        if (removedCount > 0) {
+            log.info("만료된 세션 정리 완료: {}건 제거", removedCount);
+        }
     }
 }

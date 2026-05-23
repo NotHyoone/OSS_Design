@@ -25,6 +25,8 @@ public class AnalysisRepository {
     private static final int MAX_RESULT_TTL_HOURS  = 72;
     /** githubId·userId별 최대 이력 보존 건수 */
     private static final int MAX_HISTORY_PER_USER  = 10;
+    /** 멈춘 running request 정리 기준 시간(시간) - 2시간 이상 running 상태면 강제 정리 */
+    private static final int STUCK_REQUEST_TTL_HOURS = 2;
 
     private final Map<String, AnalysisRequest> requestStore = new ConcurrentHashMap<>();
     private final Map<String, AnalysisResult> resultStore = new ConcurrentHashMap<>();
@@ -150,12 +152,14 @@ public class AnalysisRepository {
     /**
      * 1시간마다 만료된 데이터를 정리한다.
      * - requestStore: 완료/실패 후 24시간 경과한 항목 제거
+     * - requestStore: 2시간 이상 running 상태인 항목 강제 제거 (멈춘 요청)
      * - resultStore/metricsStore: 72시간 경과한 항목 제거
      * - githubIdHistory/userResultHistory: 사용자별 최대 10건 초과분 제거
      */
     @Scheduled(fixedDelay = 3_600_000)
     public void purgeExpired() {
         LocalDateTime requestCutoff = LocalDateTime.now().minusHours(MAX_REQUEST_TTL_HOURS);
+        LocalDateTime stuckCutoff = LocalDateTime.now().minusHours(STUCK_REQUEST_TTL_HOURS);
         LocalDateTime resultCutoff  = LocalDateTime.now().minusHours(MAX_RESULT_TTL_HOURS);
 
         // 1. 완료/실패된 오래된 request 제거
@@ -164,6 +168,16 @@ public class AnalysisRepository {
             .map(AnalysisRequest::getRequestId)
             .collect(Collectors.toList());
         staleRequestIds.forEach(requestStore::remove);
+
+        // 1-1. 멈춘 running request 제거 (2시간 이상 running 상태)
+        List<String> stuckRequestIds = requestStore.values().stream()
+            .filter(r -> r.isRunning() && r.getRequestedAt().isBefore(stuckCutoff))
+            .map(AnalysisRequest::getRequestId)
+            .collect(Collectors.toList());
+        stuckRequestIds.forEach(id -> {
+            requestStore.remove(id);
+            activeRequests.values().removeIf(rid -> rid.equals(id));
+        });
 
         // 2. 오래된 result + metrics 제거
         List<String> staleResultIds = resultStore.values().stream()
@@ -187,7 +201,7 @@ public class AnalysisRepository {
             }
         });
 
-        log.info("정기 정리 완료: request {}건, result {}건 제거",
-            staleRequestIds.size(), staleResultIds.size());
+        log.info("정기 정리 완료: request {}건, stuck {}건, result {}건 제거",
+            staleRequestIds.size(), stuckRequestIds.size(), staleResultIds.size());
     }
 }

@@ -126,12 +126,15 @@ public class GithubApiClient {
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), Map.class);
+            updateRateLimit(resp.getHeaders());
             Map<String, Object> body = resp.getBody();
             if (body == null) return Collections.emptyMap();
             Map<String, Long> result = new HashMap<>();
             body.forEach((k, v) -> result.put(k, ((Number) v).longValue()));
             return result;
         } catch (Exception e) {
+            extractAndThrow429(e);
+            log.warn("언어 정보 조회 실패 ({}/{}): {}", githubId, repoName, e.getMessage());
             return Collections.emptyMap();
         }
     }
@@ -201,8 +204,10 @@ public class GithubApiClient {
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(
                 url, HttpMethod.GET, buildHeaders(), Map.class);
+            updateRateLimit(resp.getHeaders());
             return resp.getBody();
         } catch (Exception e) {
+            extractAndThrow429(e);
             log.warn("사용자 프로필 조회 실패 ({}): {}", githubId, e.getMessage());
             return null;
         }
