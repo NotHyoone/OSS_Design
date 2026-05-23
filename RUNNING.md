@@ -1,80 +1,160 @@
 # 프로젝트 실행 가이드
 
-GitHub Activity Insight를 로컬에서 빠르게 실행하는 방법입니다.
+GitHub Activity Insight를 로컬에서 실행하는 방법입니다.
 
 ---
 
-## 📋 시스템 요구사항
+## 시스템 요구사항
 
-- **Java**: 17 이상
-- **Maven**: 3.8+
-- **선택 사항**: PostgreSQL 12+ (H2 임베디드 DB로도 개발 가능)
+| 항목 | 버전 |
+|------|------|
+| Java | 17 이상 |
+| Maven | 3.8 이상 |
+| PostgreSQL | 12 이상 (로컬 개발 시 H2로 대체 가능) |
 
 ---
 
-## 🚀 빠른 시작 (H2 임베디드 DB 사용)
+## GitHub OAuth App 설정 (로그인 기능 사용 시 필수)
 
-로컬 개발에서는 별도의 데이터베이스 설치 없이 H2를 사용할 수 있습니다.
+GitHub 로그인을 사용하려면 OAuth App을 먼저 등록해야 합니다.
 
-### 1단계: 로컬 설정 파일 생성
+1. [GitHub Developer Settings](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App** 클릭
+2. 아래 값을 입력합니다:
 
-`backend/src/main/resources/application-local.properties` 파일을 생성하세요:
+   | 필드 | 값 |
+   |------|----|
+   | Application name | GitHub Activity Insight (자유) |
+   | Homepage URL | `http://localhost:8080` |
+   | Authorization callback URL | `http://localhost:8080/auth/callback` |
 
-```properties
-# 프로파일 활성화
-spring.profiles.active=local
+3. 등록 후 **Client ID**와 **Client Secret**을 메모해 둡니다.
 
-# H2 데이터베이스 (파일 기반, 자동 생성)
-spring.datasource.url=jdbc:h2:file:./data/insight;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-spring.datasource.driverClassName=org.h2.Driver
-spring.datasource.username=sa
-spring.datasource.password=
+> OAuth App 없이도 GitHub ID 분석 기능은 사용할 수 있습니다. 로그인 없이는 결과 조회·이력·PDF 다운로드가 불가합니다.
 
-# H2 콘솔 활성화 (데이터 조회/관리용)
-spring.h2.console.enabled=true
-spring.h2.console.path=/h2-console
+---
 
-# JPA/Hibernate 설정
-spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=false
+## 빠른 시작 — H2 임베디드 DB (별도 DB 설치 불필요)
 
-# 로깅
-logging.level.com.github.insight=DEBUG
+`application-local.properties`가 이미 포함되어 있으므로 아래 명령만 실행하면 됩니다.
+
+### 1단계: 환경 변수 설정
+
+**Linux / macOS**
+
+```bash
+export GITHUB_OAUTH_CLIENT_ID=<GitHub OAuth Client ID>
+export GITHUB_OAUTH_CLIENT_SECRET=<GitHub OAuth Client Secret>
+# GitHub API 호출용 (선택 — 없으면 API 요청에 rate limit 적용)
+export GITHUB_TOKEN=<GitHub Personal Access Token>
+```
+
+**Windows (PowerShell)**
+
+```powershell
+$env:GITHUB_OAUTH_CLIENT_ID = "<GitHub OAuth Client ID>"
+$env:GITHUB_OAUTH_CLIENT_SECRET = "<GitHub OAuth Client Secret>"
+$env:GITHUB_TOKEN = "<GitHub Personal Access Token>"  # 선택
+```
+
+**Windows (명령 프롬프트)**
+
+```cmd
+set GITHUB_OAUTH_CLIENT_ID=<GitHub OAuth Client ID>
+set GITHUB_OAUTH_CLIENT_SECRET=<GitHub OAuth Client Secret>
+set GITHUB_TOKEN=<GitHub Personal Access Token>
 ```
 
 ### 2단계: 애플리케이션 실행
+
+**Linux / macOS**
 
 ```bash
 cd backend
 mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
 ```
 
-또는 IDE에서 실행할 때 VM 옵션 추가:
+**Windows (PowerShell) — 환경변수 방식 권장**
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "local"
+cd backend
+mvn spring-boot:run
+```
+
+PowerShell에서 `-D` 인자 방식을 쓰려면:
+
+```powershell
+cd backend
+mvn spring-boot:run "-Dspring-boot.run.jvmArguments=-Dspring.profiles.active=local"
+```
+
+> **중요**: `backend/` 디렉터리에서 실행해야 합니다. Maven 빌드 설정에 의해 작업 디렉터리가 자동으로 프로젝트 루트로 설정되어 `web/` 폴더의 프론트엔드 파일이 정상 서빙됩니다.
+
+IDE(IntelliJ IDEA, Eclipse)에서 실행할 경우 VM 옵션에 추가:
+
 ```
 -Dspring.profiles.active=local
 ```
 
-### 3단계: 서버 확인
+### 3단계: 서버 기동 확인
 
-서버가 시작되면 다음 URL에 접근하세요:
+다음 로그가 출력되면 서버가 준비된 것입니다:
 
-- **API 서버**: http://localhost:8080
-- **H2 콘솔**: http://localhost:8080/h2-console
-  - JDBC URL: `jdbc:h2:file:./data/insight;MODE=PostgreSQL`
-  - Username: `sa`
-  - Password: (공란)
+```
+Started GithubInsightApplication in X.XXX seconds
+```
 
 ---
 
-## 🗄️ PostgreSQL을 사용한 개발
+## 접속 URL
 
-프로덕션과 같은 환경에서 테스트하려면 PostgreSQL을 사용하세요.
+서버 기동 후 아래 URL로 접근합니다.
 
-### Docker로 PostgreSQL 시작하기 (권장)
+### 웹 화면
+
+| 페이지 | URL |
+|--------|-----|
+| 메인 대시보드 | `http://localhost:8080/` |
+| 로그인 | `http://localhost:8080/login.html` |
+| 분석 진행 | `http://localhost:8080/progress.html` |
+| 분석 결과 | `http://localhost:8080/result.html` |
+| 분석 이력 | `http://localhost:8080/history.html` |
+| H2 DB 콘솔 (로컬 전용) | `http://localhost:8080/h2-console` |
+
+### API 엔드포인트
+
+| 분류 | 메서드 | 경로 | 설명 |
+|------|--------|------|------|
+| 정보 | GET | `/api/info` | API 버전 및 엔드포인트 목록 |
+| 인증 | GET | `/auth/login` | GitHub OAuth 로그인 시작 (리다이렉트) |
+| 인증 | GET | `/auth/callback` | GitHub OAuth 콜백 처리 |
+| 인증 | GET | `/auth/me` | 현재 로그인 상태 조회 |
+| 인증 | POST | `/auth/logout` | 로그아웃 |
+| GitHub | GET | `/api/github/validate?id={githubId}` | GitHub ID 존재 여부 확인 |
+| 분석 | POST | `/api/analysis/request` | 분석 요청 생성 |
+| 분석 | GET | `/api/analysis/status/{requestId}` | 분석 진행 상태 조회 |
+| 분석 | GET | `/api/analysis/result/{githubId}` | 최신 분석 결과 조회 (로그인 필요) |
+| 분석 | GET | `/api/analysis/history/{githubId}` | 분석 이력 목록 (로그인 필요) |
+| 분석 | GET | `/api/analysis/report/{githubId}` | PDF 리포트 다운로드 (로그인 필요) |
+| 분석 | POST | `/api/analysis/cancel/{requestId}` | 분석 취소 |
+
+### H2 콘솔 접속 정보 (로컬 개발 전용)
+
+`http://localhost:8080/h2-console` 접속 후 아래 값 입력:
+
+| 항목 | 값 |
+|------|----|
+| JDBC URL | `jdbc:h2:file:./data/insight;MODE=PostgreSQL` |
+| Username | `sa` |
+| Password | (공란) |
+
+---
+
+## PostgreSQL을 사용한 개발 (프로덕션 환경 동일)
+
+### Docker로 PostgreSQL 실행
 
 ```bash
-# PostgreSQL 컨테이너 실행
 docker run -d \
   --name insight-postgres \
   -e POSTGRES_DB=insight \
@@ -82,30 +162,39 @@ docker run -d \
   -e POSTGRES_PASSWORD=localdev123 \
   -p 5432:5432 \
   postgres:15-alpine
-
-# 데이터베이스 생성 확인
-docker exec insight-postgres psql -U insight_user -d insight -c "\dt"
 ```
 
 ### 환경 변수 설정
 
+**Linux / macOS**
+
 ```bash
-# Linux/macOS
 export DB_HOST=localhost
 export DB_PORT=5432
 export DB_NAME=insight
 export DB_USER=insight_user
 export DB_PASSWORD=localdev123
-
-# Windows (PowerShell)
-$env:DB_HOST="localhost"
-$env:DB_PORT="5432"
-$env:DB_NAME="insight"
-$env:DB_USER="insight_user"
-$env:DB_PASSWORD="localdev123"
+export GITHUB_OAUTH_CLIENT_ID=<Client ID>
+export GITHUB_OAUTH_CLIENT_SECRET=<Client Secret>
+export GITHUB_OAUTH_REDIRECT_URI=http://localhost:8080/auth/callback
+export GITHUB_TOKEN=<Personal Access Token>  # 선택
 ```
 
-### 애플리케이션 실행
+**Windows (PowerShell)**
+
+```powershell
+$env:DB_HOST = "localhost"
+$env:DB_PORT = "5432"
+$env:DB_NAME = "insight"
+$env:DB_USER = "insight_user"
+$env:DB_PASSWORD = "localdev123"
+$env:GITHUB_OAUTH_CLIENT_ID = "<Client ID>"
+$env:GITHUB_OAUTH_CLIENT_SECRET = "<Client Secret>"
+$env:GITHUB_OAUTH_REDIRECT_URI = "http://localhost:8080/auth/callback"
+$env:GITHUB_TOKEN = "<Personal Access Token>"
+```
+
+### 애플리케이션 실행 (PostgreSQL 프로파일 기본값)
 
 ```bash
 cd backend
@@ -114,129 +203,89 @@ mvn spring-boot:run
 
 ---
 
-## 🛠️ 빌드 및 배포
+## 빌드 및 JAR 실행
 
-### 프로젝트 빌드
+### 빌드
 
 ```bash
 cd backend
 mvn clean package -DskipTests
 ```
 
-빌드 결과: `backend/target/github-activity-insight-1.0.0.jar`
+빌드 결과물: `backend/target/github-activity-insight-1.0.0.jar`
 
-### 실행 가능한 JAR 파일 실행
+### JAR 실행
 
 ```bash
+# 프로젝트 루트에서 실행 (web/ 폴더 서빙을 위해 루트에서 실행 필요)
 java -jar backend/target/github-activity-insight-1.0.0.jar
+
+# 로컬 H2 프로파일로 실행
+java -jar backend/target/github-activity-insight-1.0.0.jar --spring.profiles.active=local
+
+# 포트 변경
+java -jar backend/target/github-activity-insight-1.0.0.jar --server.port=8081
 ```
 
-### Docker 이미지로 배포
-
-```bash
-# 이미지 빌드
-docker build -t github-insight:latest backend/
-
-# 컨테이너 실행
-docker run -d \
-  -p 8080:8080 \
-  -e DB_HOST=insight-postgres \
-  -e DB_USER=insight_user \
-  -e DB_PASSWORD=localdev123 \
-  --name github-insight \
-  --link insight-postgres \
-  github-insight:latest
-```
-
-### Docker Compose로 전체 스택 실행
-
-```bash
-docker-compose up -d
-```
+> JAR 실행 시 반드시 **프로젝트 루트 디렉터리**에서 실행해야 `web/` 정적 파일이 정상적으로 서빙됩니다.
 
 ---
 
-## 📝 주요 설정 파일
-
-| 파일 | 설명 |
-|------|------|
-| `backend/pom.xml` | Maven 의존성 및 빌드 설정 |
-| `backend/src/main/resources/application.properties` | 기본 설정 |
-| `backend/src/main/resources/application-local.properties` | 로컬 개발 설정 (생성 필요) |
-
----
-
-## ✅ 헬스 체크
-
-### API 서버 상태 확인
-
-```bash
-curl http://localhost:8080/api/auth/me
-```
-
-### 데이터베이스 연결 확인 (H2)
-
-```bash
-curl http://localhost:8080/h2-console
-```
-
----
-
-## 🐛 문제 해결
+## 문제 해결
 
 ### 포트 충돌 (8080 이미 사용 중)
 
 ```bash
-# 포트 변경하여 실행
+# 사용 중인 프로세스 확인 (Linux/macOS)
+lsof -i :8080
+
+# 다른 포트로 실행
 java -jar backend/target/github-activity-insight-1.0.0.jar --server.port=8081
+```
+
+```powershell
+# 사용 중인 프로세스 확인 (Windows PowerShell)
+netstat -ano | findstr :8080
 ```
 
 ### PostgreSQL 연결 실패
 
-```bash
-# 데이터베이스 연결 확인
-psql -h localhost -U insight_user -d insight
-
-# 컨테이너 로그 확인
-docker logs insight-postgres
 ```
+FATAL: password authentication failed for user "insight_user"
+```
+
+- `DB_PASSWORD` 환경 변수 값을 확인하세요.
+- `psql -h localhost -U insight_user -d insight` 로 직접 접속 테스트
+- `docker logs insight-postgres` 로 컨테이너 로그 확인
+
+### H2 콘솔에 테이블이 없을 때
+
+`spring.jpa.hibernate.ddl-auto=create`(application-local.properties)로 설정되어 있으므로 서버 재시작 시 스키마가 재생성됩니다. 데이터가 초기화되는 것이 정상입니다.
+
+### 프론트엔드(web/) 파일이 404가 날 때
+
+`mvn spring-boot:run`은 `backend/` 디렉터리에서 실행하고, `java -jar`는 프로젝트 루트에서 실행해야 합니다. `WebConfig`가 `file:web/` 경로를 참조하기 때문입니다.
 
 ### 의존성 문제
 
 ```bash
-# 의존성 업데이트 및 캐시 초기화
 mvn clean install -U
 ```
 
 ---
 
-## 📚 추가 정보
+## 주요 설정 파일
 
-- **자세한 배포 가이드**: [DEPLOYMENT.md](DEPLOYMENT.md)
-- **프로젝트 개요**: [README.md](README.md)
-- **Spring Boot 공식 문서**: https://spring.io/projects/spring-boot
+| 파일 | 설명 |
+|------|------|
+| `backend/src/main/resources/application.properties` | 기본 설정 (PostgreSQL) |
+| `backend/src/main/resources/application-local.properties` | 로컬 개발 설정 (H2) |
+| `.env.example` | 환경 변수 템플릿 |
+| `backend/pom.xml` | Maven 빌드 및 의존성 |
 
 ---
 
-## 🔄 개발 워크플로우
+## 추가 자료
 
-```bash
-# 1. 로컬 환경 설정
-# - application-local.properties 생성
-
-# 2. 애플리케이션 시작
-cd backend
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
-
-# 3. 코드 수정 및 테스트
-# (IDE에서 코드 변경 → 자동으로 핫 리로드됨)
-
-# 4. 변경사항 커밋
-git add .
-git commit -m "feat: 새로운 기능 추가"
-
-# 5. 프로덕션 배포 (준비 시)
-mvn clean package -DskipTests
-docker build -t github-insight:latest backend/
-docker run -d -p 8080:8080 github-insight:latest
-```
+- **배포 가이드**: [DEPLOYMENT.md](DEPLOYMENT.md)
+- **프로젝트 개요**: [README.md](README.md)
