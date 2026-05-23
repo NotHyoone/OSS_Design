@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Activity Insight - Design Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3, h4, h5, h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #222;
+        }
+        h1 {
+            font-size: 2.5em;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 0.3em;
+        }
+        h2 {
+            font-size: 2em;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 0.3em;
+        }
+        h3 {
+            font-size: 1.5em;
+            color: #0056b3;
+        }
+        h4 {
+            font-size: 1.2em;
+            color: #0066cc;
+        }
+        .mermaid {
+            background-color: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+        }
+        .diagram-title {
+            font-weight: bold;
+            color: #555;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.95em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f0f0f0;
+        }
+        hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ddd;
+        }
+        p {
+            margin-bottom: 1em;
+        }
+        .section-info {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 15px 0;
+        }
+        .toc {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .toc a {
+            display: block;
+            margin: 8px 0;
+            color: #0056b3;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+        li {
+            margin-bottom: 0.5em;
+        }
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            h2 {
+                font-size: 1.5em;
+            }
+            table {
+                font-size: 0.85em;
+            }
+            th, td {
+                padding: 8px;
+            }
+        }
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+        }
+        .back-to-top:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 GitHub Activity Insight</h1>
+        <p><em>GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템</em></p>
+
+        <div class="header-info">
+            <div>
+                <strong>Student No:</strong> 22212046<br>
+                <strong>Name:</strong> 안효원<br>
+                <strong>E-Mail:</strong> gydnjs3505@gmail.com
+            </div>
+            <div>
+                <strong>Organization:</strong> 영남대학교 (Yeungnam University)
+            </div>
+        </div>
+
+        <h2>Revision History</h2>
+        <table>
+            <tr>
+                <th>Revision Date</th>
+                <th>Version</th>
+                <th>Description</th>
+                <th>Author</th>
+            </tr>
+            <tr>
+                <td>2026-05-11</td>
+                <td>1.0</td>
+                <td>Initial draft</td>
+                <td>안효원</td>
+            </tr>
+            <tr>
+                <td>2026-05-11</td>
+                <td>1.1</td>
+                <td>Added class diagram and descriptions</td>
+                <td>안효원</td>
+            </tr>
+            <tr>
+                <td>2026-05-14</td>
+                <td>1.2</td>
+                <td>AnalysisService·AnalysisRepository 추가, 오케스트레이션 메서드 보완</td>
+                <td>안효원</td>
+            </tr>
+            <tr>
+                <td>2026-05-22</td>
+                <td>1.3</td>
+                <td>Added GitHub OAuth 2.0 authentication</td>
+                <td>안효원</td>
+            </tr>
+            <tr>
+                <td>2026-05-22</td>
+                <td>1.4</td>
+                <td>Sequence Diagrams (SD-01~SD-04) 및 AnalysisRequest State Machine 추가</td>
+                <td>안효원</td>
+            </tr>
+        </table>
+
+        <hr>
+
+        <h2>Contents</h2>
+        <div class="toc">
+            <a href="#introduction">1. Introduction</a>
+            <a href="#class-diagram">2. Class Diagram</a>
+            <a href="#sequence-diagram">3. Sequence Diagram</a>
+            <a href="#state-machine">4. State Machine Diagram</a>
+            <a href="#implementation">5. Implementation Requirements</a>
+            <a href="#glossary">6. Glossary</a>
+            <a href="#references">7. References</a>
+        </div>
+
+        <hr>
+
+        <h2 id="introduction">1. Introduction</h2>
+        <p>본 문서는 GitHub Activity Insight 시스템의 설계(Design) 단계 산출물입니다. 주요 클래스, 시퀀스 다이어그램, 상태 머신 다이어그램을 포함합니다.</p>
+
+        <hr>
+
+        <h2 id="class-diagram">2. Class Diagram</h2>
+
+        <h3>2.1 기본 데이터 타입 정의</h3>
+        <div class="mermaid">
+classDiagram
+    direction LR
+
+    class String {
+        &lt;&lt;datatype&gt;&gt;
+    }
+
+    class Integer {
+        &lt;&lt;datatype&gt;&gt;
+    }
+
+    class Float {
+        &lt;&lt;datatype&gt;&gt;
+    }
+
+    class Boolean {
+        &lt;&lt;datatype&gt;&gt;
+    }
+
+    class DateTime {
+        &lt;&lt;datatype&gt;&gt;
+    }
+
+    class Long {
+        &lt;&lt;datatype&gt;&gt;
+    }
+        </div>
+        <div class="diagram-title">[그림 2-1] 기본 데이터 타입 정의</div>
+
+        <h3>2.2 패키지 구조 및 계층도</h3>
+        <div class="mermaid">
+graph TD
+    subgraph Authentication["🔐 Authentication Layer"]
+        A1["User"]
+        A2["OAuthClient"]
+        A3["AuthenticationService"]
+        A4["GithubProfile"]
+    end
+
+    subgraph Domain["📊 Domain Model Layer"]
+        D1["AnalysisRequest"]
+        D2["ActivityData"]
+        D3["Metrics"]
+        D4["AnalysisResult"]
+        D5["FeedbackItem"]
+    end
+
+    subgraph Services["⚙️ Service Layer"]
+        S1["GithubApiClient"]
+        S2["MetricCalculator"]
+        S3["CompetencyScorer"]
+        S4["FeedbackGenerator"]
+        S7["AnalysisService"]
+    end
+
+    A1 -->|initiates| D1
+    S7 -->|orchestrates| S1
+    S7 -->|orchestrates| S2
+    S7 -->|orchestrates| S3
+        </div>
+        <div class="diagram-title">[그림 2-2] 4계층 패키지 구조도</div>
+
+        <h3>2.3 Authentication Layer</h3>
+        <div class="mermaid">
+classDiagram
+    direction TB
+
+    class User {
+        +String userId
+        +String githubId
+        +String email
+        +String displayName
+        +String avatarUrl
+        +String sessionId
+        +DateTime createdAt
+        +DateTime lastLoginAt
+        +validate() Boolean
+        +isSessionValid() Boolean
+        +updateLastLogin() void
+    }
+
+    class OAuthClient {
+        -String clientId
+        -String clientSecret
+        -String redirectUri
+        +getAuthorizationUrl(String state, String codeChallenge) String
+        +exchangeCodeForToken(String code, String codeVerifier) String
+        +refreshAccessToken(String refreshToken) String
+        +getUserProfile(String accessToken) Map
+        -validateState(String state) Boolean
+    }
+
+    class AuthenticationService {
+        -OAuthClient oauthClient
+        -Integer sessionTimeoutMinutes
+        +initiateOAuthFlow() String
+        +handleOAuthCallback(String code, String state, String codeVerifier) User
+        +validateSession(String sessionId) Boolean
+        +invalidateSession(String sessionId) void
+        +createSession(User user) String
+    }
+
+    AuthenticationService ..> OAuthClient : «use»
+    AuthenticationService ..> User : «create»
+        </div>
+        <div class="diagram-title">[그림 2-3] Authentication Layer - 사용자 인증 및 세션 관리</div>
+
+        <hr>
+
+        <h2 id="sequence-diagram">3. Sequence Diagram</h2>
+
+        <h3>3.1 개요</h3>
+        <p>본 장에서는 주요 유스케이스의 객체 간 협력 흐름을 시퀀스 다이어그램으로 명세합니다.</p>
+
+        <table>
+            <tr>
+                <th>다이어그램 ID</th>
+                <th>대응 UC</th>
+                <th>제목</th>
+            </tr>
+            <tr>
+                <td>SD-01</td>
+                <td>UC-00</td>
+                <td>GitHub OAuth 2.0 로그인</td>
+            </tr>
+            <tr>
+                <td>SD-02</td>
+                <td>UC-01~02</td>
+                <td>GitHub ID 입력 및 분석 요청 생성</td>
+            </tr>
+            <tr>
+                <td>SD-03</td>
+                <td>UC-03~05</td>
+                <td>분석 파이프라인 실행</td>
+            </tr>
+            <tr>
+                <td>SD-04</td>
+                <td>UC-06</td>
+                <td>결과 조회</td>
+            </tr>
+        </table>
+
+        <h3>3.2 SD-01: UC-00 GitHub OAuth 2.0 로그인</h3>
+        <p>사용자가 [GitHub로 로그인] 버튼을 클릭한 시점부터 세션이 생성되고 Home 화면으로 이동하는 시점까지의 흐름입니다. PKCE(Proof Key for Code Exchange) 방식을 적용하여 인증 코드 탈취 공격을 방지합니다.</p>
+        <div class="mermaid">
+sequenceDiagram
+    actor User as 사용자 (브라우저)
+    participant WebApp as WebApp
+    participant AuthCtrl as AuthController
+    participant AuthSvc as AuthenticationService
+    participant OAuthCli as OAuthClient
+    participant GitHub as GitHub OAuth API
+
+    User->>WebApp: GitHub로 로그인 버튼 클릭
+    WebApp->>AuthCtrl: GET /auth/login
+    AuthCtrl->>+AuthSvc: initiateOAuthFlow()
+    AuthSvc->>AuthSvc: generateCodeVerifier(), generateState()
+    AuthSvc->>AuthSvc: generateCodeChallenge(codeVerifier)
+    AuthSvc->>OAuthCli: getAuthorizationUrl(state, codeChallenge)
+    OAuthCli-->>AuthSvc: authorizationUrl
+    AuthSvc-->>-AuthCtrl: authorizationUrl (state·codeVerifier 세션 저장)
+    AuthCtrl-->>WebApp: 302 Redirect → authorizationUrl
+
+    WebApp->>GitHub: 인증 요청 (code_challenge, state 포함)
+    GitHub-->>User: GitHub 로그인 화면 표시
+    User->>GitHub: 계정 입력 및 앱 권한 승인
+    GitHub-->>WebApp: 302 Redirect /auth/callback (code, state)
+
+    WebApp->>AuthCtrl: GET /auth/callback (code, state)
+    AuthCtrl->>+AuthSvc: handleOAuthCallback(code, state, codeVerifier)
+    AuthSvc->>AuthSvc: validateState(state) — CSRF 검증
+    AuthSvc->>+OAuthCli: exchangeCodeForToken(code, codeVerifier)
+    OAuthCli->>GitHub: POST /login/oauth/access_token
+    GitHub-->>OAuthCli: access_token
+    OAuthCli-->>-AuthSvc: accessToken
+    AuthSvc->>+OAuthCli: getUserProfile(accessToken)
+    OAuthCli->>GitHub: GET /user
+    GitHub-->>OAuthCli: 사용자 프로필 JSON
+    OAuthCli-->>-AuthSvc: profileMap
+    AuthSvc->>AuthSvc: User 객체 생성 또는 업데이트
+    AuthSvc->>AuthSvc: createSession(user) → sessionId
+    AuthSvc-->>-AuthCtrl: User (sessionId 포함)
+    AuthCtrl-->>WebApp: Set-Cookie: sessionId (HttpOnly; Secure), 200 OK
+    WebApp-->>User: Home 화면으로 이동 (분석 입력 활성화)
+        </div>
+        <div class="diagram-title">[그림 3-1] SD-01: GitHub OAuth 2.0 로그인 시퀀스</div>
+
+        <h3>3.3 SD-02: UC-01~02 GitHub ID 입력 및 분석 요청 생성</h3>
+        <p>사용자가 GitHub ID를 입력하고 [Start Analysis] 버튼을 클릭한 시점부터 AnalysisRequest(status=PENDING)가 생성되는 흐름입니다.</p>
+        <div class="mermaid">
+sequenceDiagram
+    actor User as 사용자 (브라우저)
+    participant WebApp as WebApp
+    participant AnalysisCtrl as AnalysisController
+    participant AuthSvc as AuthenticationService
+    participant AnalysisSvc as AnalysisService
+    participant GithubClient as GithubApiClient
+    participant Repo as AnalysisRepository
+
+    User->>WebApp: GitHub ID 입력 후 [Start Analysis] 클릭
+    WebApp->>AnalysisCtrl: POST /api/analysis {githubId}
+    AnalysisCtrl->>AuthSvc: validateSession(sessionId)
+    AuthSvc-->>AnalysisCtrl: true (세션 유효)
+
+    AnalysisCtrl->>+AnalysisSvc: requestAnalysis(userId, githubId)
+
+    Note over AnalysisSvc,GithubClient: UC-01 GitHub ID 유효성 검증
+    AnalysisSvc->>+GithubClient: validateUserExists(githubId)
+    GithubClient-->>-AnalysisSvc: true
+
+    Note over AnalysisSvc,Repo: UC-02 분석 요청 생성
+    AnalysisSvc->>AnalysisSvc: AnalysisRequest.create(userId, githubId)
+    AnalysisSvc->>Repo: save(request)
+    Repo-->>AnalysisSvc: 저장 완료
+    AnalysisSvc-->>-AnalysisCtrl: AnalysisRequest (requestId 포함)
+
+    AnalysisCtrl-->>WebApp: 201 Created {requestId, status: PENDING}
+    WebApp-->>User: Progress 화면 표시 (requestId 기반 폴링 시작)
+        </div>
+        <div class="diagram-title">[그림 3-2] SD-02: GitHub ID 입력 및 분석 요청 생성 시퀀스</div>
+
+        <h3>3.4 SD-03: UC-03~05 분석 파이프라인 실행</h3>
+        <p>AnalysisService.executeAnalysis()가 비동기로 실행되어 GitHub 데이터를 수집하고, 지표를 계산하며, 점수와 피드백을 생성하는 전체 파이프라인 흐름입니다.</p>
+        <div class="mermaid">
+sequenceDiagram
+    participant AnalysisSvc as AnalysisService
+    participant Repo as AnalysisRepository
+    participant GithubClient as GithubApiClient
+    participant GitHubAPI as GitHub REST API
+    participant MetricCalc as MetricCalculator
+    participant Scorer as CompetencyScorer
+    participant FeedbackGen as FeedbackGenerator
+
+    Note over AnalysisSvc: executeAnalysis(requestId) 비동기 실행 시작
+    AnalysisSvc->>Repo: save(request, status=RUNNING)
+
+    Note over AnalysisSvc,GitHubAPI: UC-03 GitHub 데이터 수집
+    AnalysisSvc->>+GithubClient: collectAll(githubId)
+    GithubClient->>GitHubAPI: GET /users/{id}/repos
+    GitHubAPI-->>GithubClient: repositories[]
+    GithubClient->>GitHubAPI: GET /repos/{owner}/{repo}/commits
+    GitHubAPI-->>GithubClient: commits[]
+    GithubClient->>GitHubAPI: GET /repos/{owner}/{repo}/languages
+    GitHubAPI-->>GithubClient: languages map
+    GithubClient->>GitHubAPI: GET /search/issues?q=author:{id}&type=pr
+    GitHubAPI-->>GithubClient: pullRequests[]
+    GithubClient->>GitHubAPI: GET /search/issues?q=author:{id}
+    GitHubAPI-->>GithubClient: issues[]
+    GithubClient->>GithubClient: deduplicate() 실행, collectedAt 기록
+    GithubClient-->>-AnalysisSvc: ActivityData
+
+    Note over AnalysisSvc,MetricCalc: UC-04 지표 계산
+    AnalysisSvc->>+MetricCalc: calculate(activityData)
+    MetricCalc->>MetricCalc: calculateActivity(data) → activityScore
+    MetricCalc->>MetricCalc: calculateDiversity(data) → diversityScore
+    MetricCalc->>MetricCalc: calculateCollaboration(data) → collaborationScore
+    MetricCalc->>MetricCalc: calculatePersistence(data) → persistenceScore
+    MetricCalc->>MetricCalc: detectAnomalies(data, metrics) → notes 기록
+    MetricCalc-->>-AnalysisSvc: Metrics
+
+    Note over AnalysisSvc,FeedbackGen: UC-05 점수 및 피드백 생성
+    AnalysisSvc->>+Scorer: evaluate(metrics)
+    Scorer->>Scorer: score(metrics) → totalScore
+    Scorer->>Scorer: classifyType(totalScore) → DeveloperType
+    Scorer-->>-AnalysisSvc: AnalysisResult (피드백 제외)
+
+    AnalysisSvc->>+FeedbackGen: generate(weaknesses)
+    FeedbackGen->>FeedbackGen: mapWeaknessToAction() → FeedbackItem 생성
+    FeedbackGen-->>-AnalysisSvc: List(FeedbackItem)
+
+    AnalysisSvc->>AnalysisSvc: result.improvements = feedbackItems 조립
+    AnalysisSvc->>Repo: saveResult(result)
+    AnalysisSvc->>Repo: save(request, status=COMPLETED)
+    Repo-->>AnalysisSvc: 저장 완료
+        </div>
+        <div class="diagram-title">[그림 3-3] SD-03: 분석 파이프라인 실행 시퀀스 (UC-03~05)</div>
+
+        <h3>3.5 SD-04: UC-06 결과 조회</h3>
+        <p>분석 완료 후 사용자가 결과를 조회하는 흐름입니다.</p>
+        <div class="mermaid">
+sequenceDiagram
+    actor User as 사용자 (브라우저)
+    participant WebApp as WebApp
+    participant AnalysisCtrl as AnalysisController
+    participant AuthSvc as AuthenticationService
+    participant AnalysisSvc as AnalysisService
+    participant Repo as AnalysisRepository
+    participant Assembler as ReportAssembler
+
+    User->>WebApp: 결과 조회 요청
+    WebApp->>AnalysisCtrl: GET /api/analysis/{requestId}/result
+    AnalysisCtrl->>AuthSvc: validateSession(sessionId)
+    AuthSvc-->>AnalysisCtrl: true (세션 유효)
+
+    AnalysisCtrl->>+AnalysisSvc: getResult(requestId)
+    AnalysisSvc->>Repo: findById(requestId)
+    Repo-->>AnalysisSvc: AnalysisRequest (userId 포함)
+    Note over AnalysisSvc: userId 일치 확인 (데이터 격리)
+    AnalysisSvc->>Repo: findResultByRequestId(requestId)
+    Repo-->>AnalysisSvc: AnalysisResult
+    AnalysisSvc-->>-AnalysisCtrl: AnalysisResult
+
+    AnalysisCtrl->>+Assembler: toViewModel(result, metrics)
+    Assembler->>Assembler: 점수·지표 그래프 데이터 조합
+    Assembler->>Assembler: hasLowTrust() 확인 → 신뢰도 배지 적용
+    Assembler-->>-AnalysisCtrl: AnalysisViewModel
+
+    AnalysisCtrl-->>WebApp: 200 OK, AnalysisViewModel
+    WebApp-->>User: 결과 대시보드 렌더링
+        </div>
+        <div class="diagram-title">[그림 3-4] SD-04: 결과 조회 시퀀스 (UC-06)</div>
+
+        <hr>
+
+        <h2 id="state-machine">4. State Machine Diagram</h2>
+
+        <h3>4.1 AnalysisRequest 상태 머신 다이어그램</h3>
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> PENDING : create(userId, githubId)
+
+    PENDING --> RUNNING : executeAnalysis() 비동기 실행 시작
+
+    RUNNING --> COMPLETED : 파이프라인 전 단계 성공
+    RUNNING --> PARTIAL : 부분 데이터 수집 완료
+    RUNNING --> FAILED : 오류 발생
+
+    FAILED --> RUNNING : retryFailedAnalysis() [canRetry = true]
+    FAILED --> [*] : 최종 실패 확정 [canRetry = false]
+
+    COMPLETED --> [*]
+    PARTIAL --> [*]
+        </div>
+        <div class="diagram-title">[그림 4-1] AnalysisRequest 상태 머신 다이어그램</div>
+
+        <h3>4.2 상태 설명</h3>
+        <table>
+            <tr>
+                <th>상태</th>
+                <th>RequestStatus</th>
+                <th>설명</th>
+            </tr>
+            <tr>
+                <td>대기</td>
+                <td>PENDING</td>
+                <td>분석 요청 생성 완료, 큐 대기 중</td>
+            </tr>
+            <tr>
+                <td>실행 중</td>
+                <td>RUNNING</td>
+                <td>데이터 수집·지표 계산·점수 생성 진행 중</td>
+            </tr>
+            <tr>
+                <td>완료</td>
+                <td>COMPLETED</td>
+                <td>분석 파이프라인 전 단계 정상 완료</td>
+            </tr>
+            <tr>
+                <td>부분 완료</td>
+                <td>PARTIAL</td>
+                <td>일부 데이터 누락 또는 최소 분석 조건 충족</td>
+            </tr>
+            <tr>
+                <td>실패</td>
+                <td>FAILED</td>
+                <td>치명적 오류로 분석 불가</td>
+            </tr>
+        </table>
+
+        <hr>
+
+        <h2 id="implementation">5. Implementation Requirements</h2>
+        <div class="section-info">
+            <strong>Status:</strong> Defined in this document (v1.4+)<br>
+            <br>
+            구현 시 준수해야 할 기술 제약 및 비기능 요구사항:
+            <ul>
+                <li>클래스 설계: 2.3 ~ 2.6절 참고</li>
+                <li>인증: GitHub OAuth 2.0 + PKCE 방식 적용</li>
+                <li>데이터 격리: userId 기반 접근 제어</li>
+                <li>세션 관리: HttpOnly, Secure 쿠키 사용</li>
+            </ul>
+        </div>
+
+        <hr>
+
+        <h2 id="glossary">6. Glossary</h2>
+        <table>
+            <tr>
+                <th>용어</th>
+                <th>정의</th>
+            </tr>
+            <tr>
+                <td>AnalysisRequest</td>
+                <td>분석 요청의 생명주기를 추적하는 엔티티</td>
+            </tr>
+            <tr>
+                <td>ActivityData</td>
+                <td>GitHub API에서 수집한 원천 활동 데이터</td>
+            </tr>
+            <tr>
+                <td>Metrics</td>
+                <td>4개 핵심 지표(활동성/다양성/협업도/지속성)</td>
+            </tr>
+            <tr>
+                <td>AnalysisResult</td>
+                <td>분석의 최종 산출물</td>
+            </tr>
+            <tr>
+                <td>User</td>
+                <td>GitHub OAuth 2.0으로 인증된 사용자</td>
+            </tr>
+            <tr>
+                <td>OAuthClient</td>
+                <td>GitHub OAuth 2.0 API 호출 캡슐화 클래스</td>
+            </tr>
+            <tr>
+                <td>AuthenticationService</td>
+                <td>사용자 인증 및 세션 관리 오케스트레이션</td>
+            </tr>
+            <tr>
+                <td>GithubApiClient</td>
+                <td>GitHub REST API 호출 캡슐화</td>
+            </tr>
+            <tr>
+                <td>MetricCalculator</td>
+                <td>ActivityData로부터 4개 지표를 산출</td>
+            </tr>
+            <tr>
+                <td>CompetencyScorer</td>
+                <td>Metrics를 종합 점수로 변환</td>
+            </tr>
+            <tr>
+                <td>FeedbackGenerator</td>
+                <td>약점 목록으로부터 맞춤형 FeedbackItem 생성</td>
+            </tr>
+            <tr>
+                <td>AnalysisService</td>
+                <td>분석 파이프라인 전체 오케스트레이션</td>
+            </tr>
+            <tr>
+                <td>AnalysisRepository</td>
+                <td>AnalysisRequest와 AnalysisResult 영속화</td>
+            </tr>
+        </table>
+
+        <hr>
+
+        <h2 id="references">7. References</h2>
+        <ul>
+            <li>GitHub REST API Documentation: https://docs.github.com/en/rest</li>
+            <li>GitHub OAuth 2.0 Guide: https://docs.github.com/en/developers/apps/building-oauth-apps</li>
+            <li>PKCE (RFC 7636): https://tools.ietf.org/html/rfc7636</li>
+            <li>UML Sequence Diagrams: https://www.uml-diagrams.org/sequence-diagrams.html</li>
+        </ul>
+
+        <hr>
+        <p style="text-align: center; color: #666; margin-top: 40px;">
+            <em>Generated: 2026-05-22 | Design Document v1.4 | GitHub Activity Insight</em>
+        </p>
+    </div>
+
+    <div class="back-to-top" onclick="scrollToTop();">↑ 위로</div>
+
+    <script>
+        // Mermaid 초기화
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        mermaid.contentLoaded();
+
+        // 스크롤 버튼 기능
+        window.addEventListener('scroll', function() {
+            const backToTop = document.querySelector('.back-to-top');
+            if (window.pageYOffset > 300) {
+                backToTop.style.display = 'block';
+            } else {
+                backToTop.style.display = 'none';
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
