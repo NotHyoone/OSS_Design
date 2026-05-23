@@ -57,12 +57,6 @@
 
     <!-- H2 임베디드 데이터베이스 (로컬 개발용) -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-h2</artifactId>
-    </dependency>
-
-    <!-- H2 JDBC 드라이버 직접 추가 -->
-    <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
       <scope>runtime</scope>
