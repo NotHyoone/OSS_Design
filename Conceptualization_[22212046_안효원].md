@@ -21,6 +21,7 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 | 03/18/2026 | 1.01 | First draft | 안효원 |
 | 03/20/2026 | 1.02 | Base conceptualization structure | 안효원 |
 | 05/22/2026 | 1.03 | Added GitHub OAuth 2.0 authentication flow and user session management | 안효원 |
+| 05/23/2026 | 1.04 | Enhanced security: Global exception handling, URL injection defense, PR/Issue collection, detailed UC-00 specification, PostgreSQL migration documented | 안효원 |
 
 ---
 
@@ -116,8 +117,12 @@ R -->|"10. Visualization / PDF"| U
 
 | 항목 | 내용 |
 | :--- | :--- |
-| Actor | User |
-| Description | 사용자가 GitHub OAuth 2.0을 통해 인증하고 세션을 생성한다. User가 로그인을 시작하고 GitHub OAuth가 인증을 수행하며 AuthenticationService가 세션을 관리한다. |
+| Actor | User, GitHub OAuth |
+| Description | 사용자가 GitHub OAuth 2.0을 통해 인증하고 세션을 생성한다. User가 [GitHub로 로그인] 버튼을 클릭하면 시스템이 PKCE 방식의 OAuth 플로우를 수행하고 AuthenticationService가 세션을 생성/관리한다. 인증 완료 후 사용자는 Home 화면에서 GitHub ID 분석을 시작할 수 있다. |
+| Preconditions | 시스템 접속 가능 상태, GitHub OAuth App 등록 및 Client ID/Secret 설정 완료 |
+| Trigger | User가 Login 화면에서 [GitHub로 로그인] 버튼을 클릭할 때 |
+| Success Post Condition | system이 사용자를 인증하고 세션을 생성한 뒤 Home 화면으로 리다이렉트하고 [분석 시작] 버튼이 활성화된다 |
+| Failed Post Condition | system이 인증 실패를 표시하고 로그인 화면에 머물러 재시도를 요청한다 |
 
 ### UC-01 GitHub ID Input
 
