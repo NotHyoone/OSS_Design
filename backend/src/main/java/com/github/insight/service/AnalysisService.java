@@ -52,7 +52,9 @@ public class AnalysisService {
             try {
                 AnalysisRequest existing = analysisRepository.findById(existingId.get());
                 if (existing.isRunning()) return existing;
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.debug("기존 분석 요청 조회 실패 ({}): {}", githubId, e.getMessage());
+            }
         }
 
         AnalysisRequest req = AnalysisRequest.create(userId, githubId);
@@ -165,7 +167,9 @@ public class AnalysisService {
                 req.markError("CANCELLED");
                 analysisRepository.save(req);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("분석 취소 실패 ({}): {}", requestId, e.getMessage());
+        }
     }
 
     public void retryFailedAnalysis(String requestId) {
