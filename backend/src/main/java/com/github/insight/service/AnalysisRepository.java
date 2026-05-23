@@ -1,17 +1,23 @@
 package com.github.insight.service;
 
+import com.github.insight.entity.AnalysisRequestEntity;
+import com.github.insight.entity.AnalysisResultEntity;
+import com.github.insight.entity.MetricsEntity;
 import com.github.insight.model.AnalysisRequest;
 import com.github.insight.model.AnalysisResult;
 import com.github.insight.model.Metrics;
 import com.github.insight.model.enums.RequestStatus;
+import com.github.insight.repository.AnalysisRequestRepository;
+import com.github.insight.repository.AnalysisResultRepository;
+import com.github.insight.repository.MetricsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,189 +25,275 @@ public class AnalysisRepository {
 
     private static final Logger log = LoggerFactory.getLogger(AnalysisRepository.class);
 
-    /** 완료/실패 request 보존 시간 (시간) */
     private static final int MAX_REQUEST_TTL_HOURS = 24;
-    /** result/metrics 보존 시간 (시간) */
     private static final int MAX_RESULT_TTL_HOURS  = 72;
-    /** githubId·userId별 최대 이력 보존 건수 */
     private static final int MAX_HISTORY_PER_USER  = 10;
-    /** 멈춘 running request 정리 기준 시간(시간) - 2시간 이상 running 상태면 강제 정리 */
     private static final int STUCK_REQUEST_TTL_HOURS = 2;
 
-    private final Map<String, AnalysisRequest> requestStore = new ConcurrentHashMap<>();
-    private final Map<String, AnalysisResult> resultStore = new ConcurrentHashMap<>();
-    private final Map<String, Metrics> metricsStore = new ConcurrentHashMap<>();
+    private final AnalysisRequestRepository requestRepo;
+    private final AnalysisResultRepository resultRepo;
+    private final MetricsRepository metricsRepo;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** githubId → requestId (최신) */
-    private final Map<String, String> activeRequests = new ConcurrentHashMap<>();
-
-    /** userId → result list (최신 순) */
-    private final Map<String, List<AnalysisResult>> userResultHistory = new ConcurrentHashMap<>();
-
-    /** githubId → result list (최신 순, 비인증 fallback) */
-    private final Map<String, List<AnalysisResult>> githubIdHistory = new ConcurrentHashMap<>();
+    public AnalysisRepository(
+            AnalysisRequestRepository requestRepo,
+            AnalysisResultRepository resultRepo,
+            MetricsRepository metricsRepo) {
+        this.requestRepo = requestRepo;
+        this.resultRepo = resultRepo;
+        this.metricsRepo = metricsRepo;
+    }
 
     public void save(AnalysisRequest request) {
-        requestStore.put(request.getRequestId(), request);
-        if (request.isRunning()) {
-            activeRequests.put(request.getGithubId(), request.getRequestId());
-        } else {
-            activeRequests.remove(request.getGithubId(), request.getRequestId());
-        }
+        AnalysisRequestEntity entity = convertToEntity(request);
+        requestRepo.save(entity);
     }
 
     public AnalysisRequest findById(String requestId) {
-        AnalysisRequest req = requestStore.get(requestId);
-        if (req == null) throw new NoSuchElementException("요청을 찾을 수 없습니다: " + requestId);
-        return req;
+        AnalysisRequestEntity entity = requestRepo.findById(requestId)
+            .orElseThrow(() -> new NoSuchElementException("요청을 찾을 수 없습니다: " + requestId));
+        return convertToModel(entity);
     }
 
     public boolean exists(String requestId) {
-        return requestStore.containsKey(requestId);
+        return requestRepo.existsById(requestId);
     }
 
     public List<AnalysisRequest> findAll() {
-        return new ArrayList<>(requestStore.values());
+        return requestRepo.findAll().stream()
+            .map(this::convertToModel)
+            .collect(Collectors.toList());
     }
 
     public List<AnalysisRequest> findByStatus(RequestStatus status) {
-        return requestStore.values().stream()
-            .filter(r -> r.getStatus() == status)
+        return requestRepo.findByStatus(status).stream()
+            .map(this::convertToModel)
             .collect(Collectors.toList());
     }
 
     public void saveResult(AnalysisResult result) {
-        resultStore.put(result.getRequestId(), result);
-
-        if (result.getUserId() != null) {
-            userResultHistory
-                .computeIfAbsent(result.getUserId(), k -> Collections.synchronizedList(new ArrayList<>()))
-                .add(0, result);
-        }
-        if (result.getGithubId() != null) {
-            githubIdHistory
-                .computeIfAbsent(result.getGithubId(), k -> Collections.synchronizedList(new ArrayList<>()))
-                .add(0, result);
-        }
+        AnalysisResultEntity entity = convertResultToEntity(result);
+        resultRepo.save(entity);
     }
 
     public void saveMetrics(String requestId, Metrics metrics) {
-        metricsStore.put(requestId, metrics);
+        MetricsEntity entity = convertMetricsToEntity(requestId, metrics);
+        metricsRepo.save(entity);
     }
 
     public AnalysisResult findResultByRequestId(String requestId) {
-        AnalysisResult r = resultStore.get(requestId);
-        if (r == null) throw new NoSuchElementException("결과를 찾을 수 없습니다: " + requestId);
-        return r;
+        AnalysisResultEntity entity = resultRepo.findByRequestId(requestId)
+            .orElseThrow(() -> new NoSuchElementException("결과를 찾을 수 없습니다: " + requestId));
+        return convertResultToModel(entity);
     }
 
     public Optional<AnalysisResult> findLatestResultByGithubId(String githubId) {
-        List<AnalysisResult> list = githubIdHistory.get(githubId);
-        if (list == null || list.isEmpty()) return Optional.empty();
-        return Optional.of(list.get(0));
+        return resultRepo.findFirstByGithubIdOrderByCreatedAtDesc(githubId)
+            .map(this::convertResultToModel);
     }
 
     public List<AnalysisResult> findResultsByUserId(String userId) {
-        List<AnalysisResult> list = userResultHistory.get(userId);
-        if (list == null) return Collections.emptyList();
-        return Collections.unmodifiableList(new ArrayList<>(list));
+        return resultRepo.findLatestByUserId(userId).stream()
+            .limit(MAX_HISTORY_PER_USER)
+            .map(this::convertResultToModel)
+            .collect(Collectors.toList());
     }
 
     public List<AnalysisResult> findResultsByGithubId(String githubId) {
-        List<AnalysisResult> list = githubIdHistory.get(githubId);
-        if (list == null) return Collections.emptyList();
-        return Collections.unmodifiableList(new ArrayList<>(list));
+        return resultRepo.findLatestByGithubId(githubId).stream()
+            .limit(MAX_HISTORY_PER_USER)
+            .map(this::convertResultToModel)
+            .collect(Collectors.toList());
     }
 
     public List<AnalysisResult> findAllResults() {
-        return new ArrayList<>(resultStore.values());
+        return resultRepo.findAll().stream()
+            .map(this::convertResultToModel)
+            .collect(Collectors.toList());
     }
 
     public Optional<Metrics> findMetricsByRequestId(String requestId) {
-        return Optional.ofNullable(metricsStore.get(requestId));
+        return metricsRepo.findByRequestId(requestId)
+            .map(this::convertMetricsToModel);
     }
 
     public Optional<String> findActiveRequestId(String githubId) {
-        return Optional.ofNullable(activeRequests.get(githubId));
+        return requestRepo.findFirstByGithubIdOrderByRequestedAtDesc(githubId)
+            .filter(AnalysisRequestEntity::isRunning)
+            .map(AnalysisRequestEntity::getRequestId);
     }
 
     public int deleteExpired(int ttlMinutes) {
-        java.time.LocalDateTime cutoff =
-            java.time.LocalDateTime.now().minusMinutes(ttlMinutes);
-        List<String> toDelete = resultStore.values().stream()
-            .filter(r -> r.getCreatedAt() != null && r.getCreatedAt().isBefore(cutoff))
-            .map(AnalysisResult::getRequestId)
-            .collect(Collectors.toList());
-        toDelete.forEach(id -> {
-            resultStore.remove(id);
-            metricsStore.remove(id);
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(ttlMinutes);
+        List<AnalysisResultEntity> expired = resultRepo.findExpiredResults(cutoff);
+        int count = expired.size();
+        expired.forEach(result -> {
+            resultRepo.deleteById(result.getResultId());
+            metricsRepo.deleteById(result.getRequestId());
         });
-        return toDelete.size();
+        return count;
     }
 
     public Map<String, Object> getStatistics() {
         Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("totalRequests", requestStore.size());
-        stats.put("totalResults", resultStore.size());
-        double avgScore = resultStore.values().stream()
-            .mapToInt(AnalysisResult::getTotalScore).average().orElse(0);
+        stats.put("totalRequests", requestRepo.count());
+        stats.put("totalResults", resultRepo.count());
+        double avgScore = resultRepo.findAll().stream()
+            .mapToInt(AnalysisResultEntity::getTotalScore)
+            .average()
+            .orElse(0);
         stats.put("averageScore", Math.round(avgScore * 10) / 10.0);
         return stats;
     }
 
-    /**
-     * 1시간마다 만료된 데이터를 정리한다.
-     * - requestStore: 완료/실패 후 24시간 경과한 항목 제거
-     * - requestStore: 2시간 이상 running 상태인 항목 강제 제거 (멈춘 요청)
-     * - resultStore/metricsStore: 72시간 경과한 항목 제거
-     * - githubIdHistory/userResultHistory: 사용자별 최대 10건 초과분 제거
-     */
     @Scheduled(fixedDelay = 3_600_000)
     public void purgeExpired() {
         LocalDateTime requestCutoff = LocalDateTime.now().minusHours(MAX_REQUEST_TTL_HOURS);
         LocalDateTime stuckCutoff = LocalDateTime.now().minusHours(STUCK_REQUEST_TTL_HOURS);
-        LocalDateTime resultCutoff  = LocalDateTime.now().minusHours(MAX_RESULT_TTL_HOURS);
+        LocalDateTime resultCutoff = LocalDateTime.now().minusHours(MAX_RESULT_TTL_HOURS);
 
         // 1. 완료/실패된 오래된 request 제거
-        List<String> staleRequestIds = requestStore.values().stream()
-            .filter(r -> !r.isRunning() && r.getRequestedAt().isBefore(requestCutoff))
-            .map(AnalysisRequest::getRequestId)
-            .collect(Collectors.toList());
-        staleRequestIds.forEach(requestStore::remove);
+        List<AnalysisRequestEntity> staleRequests = requestRepo.findExpiredByStatuses(
+            Arrays.asList(RequestStatus.COMPLETED, RequestStatus.FAILED, RequestStatus.PARTIAL),
+            requestCutoff
+        );
+        requestRepo.deleteAll(staleRequests);
 
-        // 1-1. 멈춘 running request 제거 (2시간 이상 running 상태)
-        List<String> stuckRequestIds = requestStore.values().stream()
-            .filter(r -> r.isRunning() && r.getRequestedAt().isBefore(stuckCutoff))
-            .map(AnalysisRequest::getRequestId)
-            .collect(Collectors.toList());
-        stuckRequestIds.forEach(id -> {
-            requestStore.remove(id);
-            activeRequests.values().removeIf(rid -> rid.equals(id));
-        });
+        // 1-1. 멈춘 running request 제거
+        List<AnalysisRequestEntity> stuckRequests = requestRepo.findStuckRequests(RequestStatus.RUNNING, stuckCutoff);
+        requestRepo.deleteAll(stuckRequests);
 
         // 2. 오래된 result + metrics 제거
-        List<String> staleResultIds = resultStore.values().stream()
-            .filter(r -> r.getCreatedAt() != null && r.getCreatedAt().isBefore(resultCutoff))
-            .map(AnalysisResult::getRequestId)
-            .collect(Collectors.toList());
-        staleResultIds.forEach(id -> {
-            resultStore.remove(id);
-            metricsStore.remove(id);
+        List<AnalysisResultEntity> staleResults = resultRepo.findExpiredResults(resultCutoff);
+        staleResults.forEach(result -> {
+            metricsRepo.deleteById(result.getRequestId());
         });
-
-        // 3. 이력 목록 최대 건수 초과분 제거
-        githubIdHistory.forEach((id, list) -> {
-            if (list.size() > MAX_HISTORY_PER_USER) {
-                list.subList(MAX_HISTORY_PER_USER, list.size()).clear();
-            }
-        });
-        userResultHistory.forEach((id, list) -> {
-            if (list.size() > MAX_HISTORY_PER_USER) {
-                list.subList(MAX_HISTORY_PER_USER, list.size()).clear();
-            }
-        });
+        resultRepo.deleteAll(staleResults);
 
         log.info("정기 정리 완료: request {}건, stuck {}건, result {}건 제거",
-            staleRequestIds.size(), stuckRequestIds.size(), staleResultIds.size());
+            staleRequests.size(), stuckRequests.size(), staleResults.size());
+    }
+
+    private AnalysisRequestEntity convertToEntity(AnalysisRequest model) {
+        AnalysisRequestEntity entity = new AnalysisRequestEntity();
+        entity.setRequestId(model.getRequestId());
+        entity.setUserId(model.getUserId());
+        entity.setGithubId(model.getGithubId());
+        entity.setRequestedAt(model.getRequestedAt());
+        entity.setCompletedAt(model.getCompletedAt());
+        entity.setErrorMessage(model.getErrorMessage());
+        entity.setStatus(model.getStatus());
+        entity.setRetryCount(model.getRetryCount());
+        entity.setStep(model.getStep());
+        entity.setOverallPct(model.getOverallPct());
+        entity.setDetail(model.getDetail());
+        return entity;
+    }
+
+    private AnalysisRequest convertToModel(AnalysisRequestEntity entity) {
+        AnalysisRequest model = new AnalysisRequest(entity.getUserId(), entity.getGithubId());
+        model.updateStatus(entity.getStatus());
+        if (entity.getCompletedAt() != null) {
+            model.updateProgress(entity.getStep(), entity.getOverallPct(), entity.getDetail());
+        }
+        return model;
+    }
+
+    private AnalysisResultEntity convertResultToEntity(AnalysisResult model) {
+        AnalysisResultEntity entity = new AnalysisResultEntity();
+        entity.setResultId(model.getResultId());
+        entity.setRequestId(model.getRequestId());
+        entity.setUserId(model.getUserId());
+        entity.setGithubId(model.getGithubId());
+        entity.setAvatarUrl(model.getAvatarUrl());
+        entity.setTotalScore(model.getTotalScore());
+        entity.setDeveloperType(model.getDeveloperType());
+        entity.setTrustLevel(model.getTrustLevel());
+        entity.setCreatedAt(model.getCreatedAt());
+        entity.setRuleVersion(model.getRuleVersion());
+
+        try {
+            entity.setStrengthsJson(objectMapper.writeValueAsString(model.getStrengths()));
+            entity.setImprovementsJson(objectMapper.writeValueAsString(model.getImprovements()));
+        } catch (Exception e) {
+            log.warn("JSON 직렬화 실패: {}", e.getMessage());
+        }
+
+        return entity;
+    }
+
+    private AnalysisResult convertResultToModel(AnalysisResultEntity entity) {
+        AnalysisResult model = new AnalysisResult();
+        model.setResultId(entity.getResultId());
+        model.setRequestId(entity.getRequestId());
+        model.setUserId(entity.getUserId());
+        model.setGithubId(entity.getGithubId());
+        model.setAvatarUrl(entity.getAvatarUrl());
+        model.setTotalScore(entity.getTotalScore());
+        model.setDeveloperType(entity.getDeveloperType());
+        model.setTrustLevel(entity.getTrustLevel());
+        model.setCreatedAt(entity.getCreatedAt());
+        model.setRuleVersion(entity.getRuleVersion());
+
+        try {
+            if (entity.getStrengthsJson() != null) {
+                model.setStrengths(objectMapper.readValue(entity.getStrengthsJson(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            }
+            if (entity.getImprovementsJson() != null) {
+                model.setImprovements(objectMapper.readValue(entity.getImprovementsJson(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class,
+                    objectMapper.getTypeFactory().constructType(
+                        Class.forName("com.github.insight.model.FeedbackItem")))));
+            }
+        } catch (Exception e) {
+            log.warn("JSON 역직렬화 실패: {}", e.getMessage());
+        }
+
+        return model;
+    }
+
+    private MetricsEntity convertMetricsToEntity(String requestId, Metrics model) {
+        MetricsEntity entity = new MetricsEntity(requestId);
+        entity.setActivityScore(model.getActivityScore());
+        entity.setDiversityScore(model.getDiversityScore());
+        entity.setCollaborationScore(model.getCollaborationScore());
+        entity.setPersistenceScore(model.getPersistenceScore());
+        entity.setTrustLevel(model.getTrustLevel());
+        entity.setNotes(model.getNotes());
+        entity.setCalculatedAt(model.getCalculatedAt());
+        entity.setConfidence(model.getConfidence());
+
+        try {
+            entity.setDescriptionsJson(objectMapper.writeValueAsString(model.getDescriptions()));
+        } catch (Exception e) {
+            log.warn("JSON 직렬화 실패: {}", e.getMessage());
+        }
+
+        return entity;
+    }
+
+    private Metrics convertMetricsToModel(MetricsEntity entity) {
+        Metrics model = new Metrics(entity.getRequestId());
+        model.setActivityScore(entity.getActivityScore());
+        model.setDiversityScore(entity.getDiversityScore());
+        model.setCollaborationScore(entity.getCollaborationScore());
+        model.setPersistenceScore(entity.getPersistenceScore());
+        model.setTrustLevel(entity.getTrustLevel());
+        model.setNotes(entity.getNotes());
+        model.setCalculatedAt(entity.getCalculatedAt());
+        model.setConfidence(entity.getConfidence());
+
+        try {
+            if (entity.getDescriptionsJson() != null) {
+                model.setDescriptions(objectMapper.readValue(entity.getDescriptionsJson(),
+                    objectMapper.getTypeFactory().constructMapType(Map.class, String.class, String.class)));
+            }
+        } catch (Exception e) {
+            log.warn("JSON 역직렬화 실패: {}", e.getMessage());
+        }
+
+        return model;
     }
 }
+
