@@ -1,5 +1,6 @@
 # Build output
 target/
+**/target/
 
 # H2 database files
 data/
@@ -16,7 +17,11 @@ data/
 .DS_Store
 Thumbs.db
 
-# Environment
+# Logs
+logs/
+*.log
+
+# Environment (secrets - never commit)
 .env
 .env.local
 *.env

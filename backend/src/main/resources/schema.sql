@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS analysis_requests (
   error_message TEXT,
   retry_count INT NOT NULL DEFAULT 0,
   step INT DEFAULT 0,
-  overall_pct DOUBLE DEFAULT 0.0,
+  overall_pct DOUBLE PRECISION DEFAULT 0.0,
   detail VARCHAR(500) DEFAULT '대기 중...',
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS analysis_results (
   total_score INT NOT NULL,
   developer_type VARCHAR(50) NOT NULL,
   trust_level VARCHAR(20) NOT NULL,
-  strengths_json LONGTEXT,
-  improvements_json LONGTEXT,
+  strengths_json TEXT,
+  improvements_json TEXT,
   created_at TIMESTAMP NOT NULL,
   rule_version VARCHAR(10) NOT NULL DEFAULT '1.0',
   FOREIGN KEY (request_id) REFERENCES analysis_requests(request_id) ON DELETE CASCADE,
@@ -59,9 +59,9 @@ CREATE TABLE IF NOT EXISTS metrics (
   collaboration_score FLOAT NOT NULL,
   persistence_score FLOAT NOT NULL,
   trust_level VARCHAR(20) NOT NULL DEFAULT 'HIGH',
-  notes LONGTEXT DEFAULT '',
+  notes TEXT DEFAULT '',
   confidence FLOAT,
-  descriptions_json LONGTEXT,
+  descriptions_json TEXT,
   calculated_at TIMESTAMP NOT NULL,
   FOREIGN KEY (request_id) REFERENCES analysis_requests(request_id) ON DELETE CASCADE
 );

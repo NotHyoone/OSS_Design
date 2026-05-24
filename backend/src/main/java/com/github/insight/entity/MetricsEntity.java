@@ -27,8 +27,7 @@ public class MetricsEntity {
     @Column(nullable = false)
     private TrustLevel trustLevel = TrustLevel.HIGH;
 
-    @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "text")
     private String notes = "";
 
     @Column(nullable = false)
@@ -36,8 +35,7 @@ public class MetricsEntity {
 
     private float confidence;
 
-    @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "text")
     private String descriptionsJson;
 
     public MetricsEntity() {

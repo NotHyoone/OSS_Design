@@ -34,12 +34,10 @@ public class AnalysisResultEntity {
     @Column(nullable = false)
     private TrustLevel trustLevel;
 
-    @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "text")
     private String strengthsJson;
 
-    @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "text")
     private String improvementsJson;
 
     @Column(nullable = false)

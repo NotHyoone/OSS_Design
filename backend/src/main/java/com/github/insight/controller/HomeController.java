@@ -11,6 +11,12 @@ import java.util.Map;
 @RestController
 public class HomeController {
 
+    /** 루트 경로 → index.html 리다이렉트 */
+    @GetMapping("/")
+    public RedirectView root() {
+        return new RedirectView("/index.html");
+    }
+
     /**
      * 루트 경로 - API 정보 제공
      */
