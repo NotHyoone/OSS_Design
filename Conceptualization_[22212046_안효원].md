@@ -23,6 +23,7 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 | 05/22/2026 | 1.03 | Added GitHub OAuth 2.0 authentication flow and user session management | 안효원 |
 | 05/23/2026 | 1.04 | Enhanced security: Global exception handling, URL injection defense, PR/Issue collection, detailed UC-00 specification, PostgreSQL migration documented | 안효원 |
 | 05/24/2026 | 1.05 | Synchronized UC list with Analysis (UC-01~UC-08); updated COO to match; added UC-02 분석 요청 생성, UC-08 분석 이력 비교; aligned deployment environment to Ubuntu 22.04+ / WSL2 | 안효원 |
+| 05/24/2026 | 1.06 | Synced with Design implementation: OAuth state-based flow, JSON report download, 429 rate-limit reset handling, updated security constraints | 안효원 |
 
 ---
 
@@ -90,7 +91,7 @@ W -->|"6. Raw Activity Data"| A
 A -->|"7. Metrics"| E
 E -->|"8. Score + Feedback"| R
 W -->|"9. 분석 결과 저장"| D
-R -->|"10. 결과 조회 / PDF"| U
+R -->|"10. 결과 조회 / 리포트(JSON)"| U
 ```
 
 - Developer / Student: GitHub OAuth를 통해 인증하고 분석을 요청하며 결과를 조회하는 사용자
@@ -99,7 +100,7 @@ R -->|"10. 결과 조회 / PDF"| U
 - GitHub API: 저장소/커밋 활동 데이터 제공 외부 API (인증 토큰 기반)
 - Analysis Module: Raw Activity Data를 지표(Metrics)로 변환하는 분석 모듈
 - Evaluation & Feedback Engine: 지표 기반 점수 산정 및 피드백 생성 엔진
-- Report Generator: 점수/피드백을 시각화 및 PDF 형태로 제공하는 모듈
+- Report Generator: 점수/피드백을 시각화 및 JSON 리포트 형태로 제공하는 모듈
 - User DB / Analysis History: 사용자 정보, 세션, 분석 결과 및 이력 저장소
 - Authorization Request: 사용자를 GitHub OAuth 인증 페이지로 리다이렉트하는 요청
 - Grant & Callback: GitHub에서 사용자 승인 후 인증 코드를 반환하는 콜백
@@ -108,7 +109,7 @@ R -->|"10. 결과 조회 / PDF"| U
 - Raw Activity Data: GitHub API 응답에서 추출된 원천 활동 데이터
 - Metrics: 분석 모듈이 산출한 정량 지표
 - Score + Feedback: 평가 엔진이 생성한 점수 및 개선 가이드
-- Visualization / PDF: 최종 사용자에게 제공되는 대시보드/문서 결과
+- Visualization / Report(JSON): 최종 사용자에게 제공되는 대시보드/문서 결과
 
 ---
 
@@ -119,7 +120,7 @@ R -->|"10. 결과 조회 / PDF"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User, GitHub OAuth |
-| Description | 사용자가 GitHub OAuth 2.0을 통해 인증하고 세션을 생성한다. User가 [GitHub로 로그인] 버튼을 클릭하면 시스템이 PKCE 방식의 OAuth 플로우를 수행하고 AuthenticationService가 세션을 생성/관리한다. 인증 완료 후 사용자는 Home 화면에서 GitHub ID 분석을 시작할 수 있다. |
+| Description | 사용자가 GitHub OAuth 2.0을 통해 인증하고 세션을 생성한다. User가 [GitHub로 로그인] 버튼을 클릭하면 시스템이 state 기반 OAuth 플로우를 수행하고 AuthenticationService가 세션을 생성/관리한다. 인증 완료 후 사용자는 Home 화면에서 GitHub ID 분석을 시작할 수 있다. |
 | Preconditions | 시스템 접속 가능 상태, GitHub OAuth App 등록 및 Client ID/Secret 설정 완료 |
 | Trigger | User가 Login 화면에서 [GitHub로 로그인] 버튼을 클릭할 때 |
 | Success Post Condition | system이 사용자를 인증하고 세션을 생성한 뒤 Home 화면으로 리다이렉트하고 [분석 시작] 버튼이 활성화된다 |
@@ -144,7 +145,7 @@ R -->|"10. 결과 조회 / PDF"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | System |
-| Description | GithubApiClient가 GitHub REST API를 통해 저장소, 커밋, PR, 이슈 데이터를 수집한다. Rate Limit 대응 지수 백오프(최대 3회 재시도) 적용. |
+| Description | GithubApiClient가 GitHub REST API를 통해 저장소, 커밋, PR, 이슈 데이터를 수집한다. 429 발생 시 X-RateLimit-Reset 기반 재요청 가능 시각을 계산해 처리한다. |
 
 ### UC-04 지표 계산
 
@@ -167,12 +168,12 @@ R -->|"10. 결과 조회 / PDF"| U
 | Actor | User |
 | Description | 인증된 사용자가 자신의 분석 결과(점수, 지표, 피드백)를 대시보드에서 조회한다. 다른 사용자의 결과는 userId 기반 접근 제어로 차단된다. |
 
-### UC-07 PDF 리포트 다운로드
+### UC-07 리포트 다운로드
 
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User |
-| Description | 사용자가 분석 결과를 PDF 파일로 다운로드한다. ReportGenerator가 결과 데이터를 PDF 바이너리로 렌더링하여 제공한다. |
+| Description | 사용자가 분석 결과를 JSON 리포트 파일로 다운로드한다. ReportGenerator가 결과 데이터를 JSON 바이트로 렌더링하여 제공한다. |
 
 ### UC-08 분석 이력 비교
 
@@ -192,7 +193,7 @@ R -->|"10. 결과 조회 / PDF"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 사용자 인증 및 세션 생성 |
-| Approach | User가 [GitHub로 로그인] 버튼을 클릭하면 AuthenticationService가 PKCE 플로우로 GitHub OAuth 2.0 인증을 수행하고 세션 ID를 HttpOnly 쿠키에 저장한다. |
+| Approach | User가 [GitHub로 로그인] 버튼을 클릭하면 AuthenticationService가 state 기반 GitHub OAuth 2.0 인증을 수행하고 세션 ID를 HttpOnly 쿠키에 저장한다. |
 | Dynamics | 사용자가 시스템에 최초 접근할 때 |
 | Goals | 인증된 사용자 세션 확보 후 GitHub ID 분석 입력 활성화 |
 
@@ -219,7 +220,7 @@ R -->|"10. 결과 조회 / PDF"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 원천 데이터 확보 |
-| Approach | GithubApiClient가 GitHub REST API에 저장소, 커밋, PR, 이슈 데이터 요청을 전송한다. Rate Limit 초과 시 지수 백오프로 최대 3회 재시도한다. |
+| Approach | GithubApiClient가 GitHub REST API에 저장소, 커밋, PR, 이슈 데이터 요청을 전송한다. Rate Limit(429) 응답 시 X-RateLimit-Reset 값을 기반으로 재시도 가능 시점을 계산해 처리한다. |
 | Dynamics | 분석 요청 생성 직후 자동 실행 |
 | Goals | 분석 대상 활동 데이터 완전 수집 |
 
@@ -250,14 +251,14 @@ R -->|"10. 결과 조회 / PDF"| U
 | Dynamics | 사용자 결과 조회 요청 시 |
 | Goals | 사용자에게 해석 가능한 점수/피드백 제공 |
 
-### 4.7 PDF 리포트 다운로드
+### 4.7 리포트 다운로드
 
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 결과 문서화 지원 |
-| Approach | ReportGenerator가 저장된 분석 결과를 PDF 바이너리로 렌더링하여 사용자에게 파일 다운로드로 제공한다. |
-| Dynamics | 사용자 PDF 다운로드 요청 시 |
-| Goals | 포트폴리오 활용 가능한 PDF 파일 제공 |
+| Approach | ReportGenerator가 저장된 분석 결과를 JSON 바이트로 렌더링하여 사용자에게 파일 다운로드로 제공한다. |
+| Dynamics | 사용자 리포트 다운로드 요청 시 |
+| Goals | 포트폴리오 활용 가능한 리포트(JSON) 파일 제공 |
 
 ### 4.8 분석 이력 비교
 
@@ -298,8 +299,8 @@ R -->|"10. 결과 조회 / PDF"| U
 | 가용성 (Availability) | 서비스 운영 가능 시간 | 월간 가용성 99.5% 이상 |
 | 신뢰성 (Reliability) | 데이터 수집 실패 복구 | 실패 요청 자동 재시도 3회, 실패 로그 100% 기록 |
 | 확장성 (Scalability) | 동시 사용자 처리 | 동시 분석 요청 100건 이상에서 기능 저하 없이 처리 |
-| 보안 (Security) | 인증 및 권한 관리 | GitHub OAuth 2.0 표준 준수, PKCE 적용, 인증 코드 암호화 저장 금지 |
-| 보안 (Security) | 세션 관리 | HttpOnly, Secure, SameSite 속성 설정, 세션 타임아웃 30분 |
+| 보안 (Security) | 인증 및 권한 관리 | GitHub OAuth 2.0 표준 준수, state 단일 사용 검증, 인증 코드 단일 사용 |
+| 보안 (Security) | 세션 관리 | HttpOnly 필수, Secure는 환경설정 기반 적용, 세션 타임아웃 30분 |
 | 보안 (Security) | 사용자 데이터 보호 | 전송 구간 TLS 적용, 저장 데이터 최소화 및 접근 권한 분리 |
 | 사용성 (Usability) | 결과 이해 용이성 | 점수마다 근거 지표와 개선 액션 1개 이상 제공 |
 | 유지보수성 (Maintainability) | 모델/지표 변경 용이성 | 지표 산출 모듈 분리로 규칙 변경 시 핵심 코드 수정 범위 최소화 |

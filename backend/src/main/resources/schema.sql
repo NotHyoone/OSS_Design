@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- 분석 요청 테이블
 CREATE TABLE IF NOT EXISTS analysis_requests (
   request_id VARCHAR(36) PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
+  user_id VARCHAR(36),
   github_id VARCHAR(100) NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
   requested_at TIMESTAMP NOT NULL,
@@ -30,8 +30,11 @@ CREATE TABLE IF NOT EXISTS analysis_requests (
   step INT DEFAULT 0,
   overall_pct DOUBLE PRECISION DEFAULT 0.0,
   detail VARCHAR(500) DEFAULT '대기 중...',
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
+
+-- 비로그인 분석 요청을 허용하기 위해 user_id nullable 보정
+ALTER TABLE analysis_requests ALTER COLUMN user_id DROP NOT NULL;
 
 -- 분석 결과 테이블
 CREATE TABLE IF NOT EXISTS analysis_results (

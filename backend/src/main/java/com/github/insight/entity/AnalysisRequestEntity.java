@@ -12,7 +12,7 @@ public class AnalysisRequestEntity {
     @Id
     private String requestId;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String userId;
 
     @Column(nullable = false)
