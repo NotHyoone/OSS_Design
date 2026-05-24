@@ -107,6 +107,37 @@ public class AnalysisController {
         return ResponseEntity.ok(vm);
     }
 
+    /** 요청 ID 기준 분석 결과 조회 */
+    @GetMapping("/result/request/{requestId}")
+    public ResponseEntity<?> getResultByRequest(
+            @PathVariable String requestId,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        Optional<AnalysisRequest> requestOpt = analysisService.getRequest(requestId);
+        if (requestOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        AnalysisRequest request = requestOpt.get();
+        if (request.getUserId() != null) {
+            Optional<User> userOpt = authenticatedUser(sessionId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(401).body("인증이 필요합니다.");
+            }
+            if (!request.getUserId().equals(userOpt.get().getUserId())) {
+                return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
+            }
+        }
+
+        try {
+            AnalysisResult result = analysisService.getResult(requestId);
+            Optional<Metrics> metricsOpt = analysisService.getMetrics(requestId);
+            Map<String, Object> vm = reportAssembler.toViewModel(result, metricsOpt.orElse(null));
+            return ResponseEntity.ok(vm);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     /** 분석 이력 목록 조회 (UC-08) */
     @GetMapping("/history/{githubId}")
     public ResponseEntity<?> getHistory(

@@ -125,6 +125,18 @@ const API = {
   },
 
   /**
+   * 분석 결과 조회 - 요청 ID 기준
+   * GET /api/analysis/result/request/{requestId}
+   * @param {string} requestId
+   * @returns {Promise<AnalysisResult>}
+   */
+  getAnalysisResultByRequest: async (requestId) => {
+    const res = await fetch(`/api/analysis/result/request/${encodeURIComponent(requestId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  /**
    * 분석 이력 목록 조회 (UC-08)
    * GET /api/analysis/history/{githubId}
    * @param {string} githubId
@@ -332,7 +344,7 @@ function initProgressPage() {
         clearInterval(pollTimer);
         // 결과 페이지로 이동
         setTimeout(() => {
-          location.href = `result.html?id=${encodeURIComponent(githubId)}`;
+          location.href = `result.html?id=${encodeURIComponent(githubId)}&req=${encodeURIComponent(requestId)}`;
         }, 800);
       }
 
@@ -427,6 +439,7 @@ function initResultPage() {
 
   const params   = getParams();
   const githubId = params.get('id') || 'username';
+  const requestId = params.get('req');
 
   /* 이력 비교 버튼 (UC-08) */
   const historyBtn = document.getElementById('btn-history');
@@ -437,7 +450,11 @@ function initResultPage() {
   }
 
   /* 결과 데이터 로드 */
-  API.getAnalysisResult(githubId).then((result) => {
+  const loadResult = requestId
+    ? API.getAnalysisResultByRequest(requestId)
+    : API.getAnalysisResult(githubId);
+
+  loadResult.then((result) => {
     renderResult(result);
   }).catch((error) => {
     showError('분석 결과를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
