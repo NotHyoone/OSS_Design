@@ -4,12 +4,16 @@ import com.github.insight.model.RepositoryData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -19,11 +23,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 @DisplayName("GithubApiClient 테스트")
 class GithubApiClientTests {
 
-    @MockBean
+    @Mock
     private RestTemplate restTemplate;
 
     private GithubApiClient githubApiClient;
@@ -31,6 +35,7 @@ class GithubApiClientTests {
     @BeforeEach
     void setUp() {
         githubApiClient = new GithubApiClient();
+        ReflectionTestUtils.setField(githubApiClient, "restTemplate", restTemplate);
     }
 
     @Test
@@ -56,7 +61,12 @@ class GithubApiClientTests {
                 any(),
                 any(),
                 eq(Map.class)))
-                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+                .thenThrow(HttpClientErrorException.create(
+                    HttpStatus.NOT_FOUND,
+                    "Not Found",
+                HttpHeaders.EMPTY,
+                new byte[0],
+                null));
 
         assertFalse(githubApiClient.validateUserExists(userId));
     }

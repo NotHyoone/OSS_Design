@@ -34,7 +34,8 @@ class UrlSafetyTests {
         String githubId = "../admin";
         String encoded = URLEncoder.encode(githubId, StandardCharsets.UTF_8);
         assertNotEquals(githubId, encoded);
-        assertTrue(encoded.contains("%2E"));
+        assertTrue(encoded.contains("%2F"));
+        assertFalse(encoded.contains("../"));
     }
 
     @Test

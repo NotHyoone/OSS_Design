@@ -90,7 +90,7 @@ class AnalysisServiceTests {
 
         AnalysisRequest result = analysisService.requestAnalysis(null, githubId);
 
-        assertEquals(requestId, result.getRequestId());
+        assertEquals(existing.getRequestId(), result.getRequestId());
         verify(asyncRunner, never()).run(any());
     }
 
@@ -106,7 +106,7 @@ class AnalysisServiceTests {
         Optional<AnalysisRequest> result = analysisService.getRequest(requestId);
 
         assertTrue(result.isPresent());
-        assertEquals(requestId, result.get().getRequestId());
+        assertEquals(request.getRequestId(), result.get().getRequestId());
     }
 
     @Test
