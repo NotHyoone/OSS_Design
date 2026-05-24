@@ -31,7 +31,7 @@ Spring Boot (포트 8080)
 | Java | 17 이상 |
 | Maven | 3.8 이상 (빌드 시) |
 | PostgreSQL | 12 이상 (프로덕션) |
-| OS | Linux / macOS / Windows |
+| OS | Ubuntu 22.04+ 또는 WSL2 (Ubuntu) |
 
 ### 1.2 GitHub OAuth App 등록
 
@@ -143,8 +143,6 @@ mvn clean package -DskipTests
 
 #### 환경 변수 설정 및 실행
 
-**Linux / macOS**
-
 ```bash
 export DB_HOST=<PostgreSQL 서버 IP>
 export DB_PORT=5432
@@ -158,22 +156,6 @@ export GITHUB_TOKEN=<Personal Access Token>  # 선택
 
 # 프로젝트 루트에서 실행 (web/ 폴더 서빙을 위해 루트에서 실행)
 java -jar backend/target/github-activity-insight-1.0.0.jar
-```
-
-**Windows (PowerShell)**
-
-```powershell
-$env:DB_HOST = "<PostgreSQL 서버 IP>"
-$env:DB_PORT = "5432"
-$env:DB_NAME = "insight"
-$env:DB_USER = "insight_user"
-$env:DB_PASSWORD = "<비밀번호>"
-$env:GITHUB_OAUTH_CLIENT_ID = "<Client ID>"
-$env:GITHUB_OAUTH_CLIENT_SECRET = "<Client Secret>"
-$env:GITHUB_OAUTH_REDIRECT_URI = "https://your-domain.com/auth/callback"
-$env:GITHUB_TOKEN = "<Personal Access Token>"
-
-java -jar backend\target\github-activity-insight-1.0.0.jar
 ```
 
 > **주의**: JAR 실행은 반드시 **프로젝트 루트 디렉터리**에서 실행해야 합니다. `WebConfig`가 `file:web/` 경로를 참조하므로, `backend/` 안에서 실행하면 프론트엔드 파일이 404 오류를 반환합니다.

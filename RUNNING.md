@@ -11,6 +11,7 @@ GitHub Activity Insight를 로컬에서 실행하는 방법입니다.
 | Java | 17 이상 |
 | Maven | 3.8 이상 |
 | PostgreSQL | 12 이상 (로컬 개발 시 H2로 대체 가능) |
+| OS | Ubuntu 22.04+ 또는 WSL2 (Ubuntu) |
 
 ---
 
@@ -39,8 +40,6 @@ GitHub 로그인을 사용하려면 OAuth App을 먼저 등록해야 합니다.
 
 ### 1단계: 환경 변수 설정
 
-**Linux / macOS**
-
 ```bash
 export GITHUB_OAUTH_CLIENT_ID=<GitHub OAuth Client ID>
 export GITHUB_OAUTH_CLIENT_SECRET=<GitHub OAuth Client Secret>
@@ -48,44 +47,13 @@ export GITHUB_OAUTH_CLIENT_SECRET=<GitHub OAuth Client Secret>
 export GITHUB_TOKEN=<GitHub Personal Access Token>
 ```
 
-**Windows (PowerShell)**
-
-```powershell
-$env:GITHUB_OAUTH_CLIENT_ID = "<GitHub OAuth Client ID>"
-$env:GITHUB_OAUTH_CLIENT_SECRET = "<GitHub OAuth Client Secret>"
-$env:GITHUB_TOKEN = "<GitHub Personal Access Token>"  # 선택
-```
-
-**Windows (명령 프롬프트)**
-
-```cmd
-set GITHUB_OAUTH_CLIENT_ID=<GitHub OAuth Client ID>
-set GITHUB_OAUTH_CLIENT_SECRET=<GitHub OAuth Client Secret>
-set GITHUB_TOKEN=<GitHub Personal Access Token>
-```
+> WSL2 환경에서 환경 변수를 영구 저장하려면 `~/.bashrc` 또는 `~/.profile`에 위 export 문을 추가하세요.
 
 ### 2단계: 애플리케이션 실행
-
-**Linux / macOS**
 
 ```bash
 cd backend
 mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
-```
-
-**Windows (PowerShell) — 환경변수 방식 권장**
-
-```powershell
-$env:SPRING_PROFILES_ACTIVE = "local"
-cd backend
-mvn spring-boot:run
-```
-
-PowerShell에서 `-D` 인자 방식을 쓰려면:
-
-```powershell
-cd backend
-mvn spring-boot:run "-Dspring-boot.run.jvmArguments=-Dspring.profiles.active=local"
 ```
 
 > **중요**: `backend/` 디렉터리에서 실행해야 합니다. Maven 빌드 설정에 의해 작업 디렉터리가 자동으로 프로젝트 루트로 설정되어 `web/` 폴더의 프론트엔드 파일이 정상 서빙됩니다.
@@ -166,8 +134,6 @@ docker run -d \
 
 ### 환경 변수 설정
 
-**Linux / macOS**
-
 ```bash
 export DB_HOST=localhost
 export DB_PORT=5432
@@ -178,20 +144,6 @@ export GITHUB_OAUTH_CLIENT_ID=<Client ID>
 export GITHUB_OAUTH_CLIENT_SECRET=<Client Secret>
 export GITHUB_OAUTH_REDIRECT_URI=http://localhost:8080/auth/callback
 export GITHUB_TOKEN=<Personal Access Token>  # 선택
-```
-
-**Windows (PowerShell)**
-
-```powershell
-$env:DB_HOST = "localhost"
-$env:DB_PORT = "5432"
-$env:DB_NAME = "insight"
-$env:DB_USER = "insight_user"
-$env:DB_PASSWORD = "localdev123"
-$env:GITHUB_OAUTH_CLIENT_ID = "<Client ID>"
-$env:GITHUB_OAUTH_CLIENT_SECRET = "<Client Secret>"
-$env:GITHUB_OAUTH_REDIRECT_URI = "http://localhost:8080/auth/callback"
-$env:GITHUB_TOKEN = "<Personal Access Token>"
 ```
 
 ### 애플리케이션 실행 (PostgreSQL 프로파일 기본값)
@@ -236,16 +188,13 @@ java -jar backend/target/github-activity-insight-1.0.0.jar --server.port=8081
 ### 포트 충돌 (8080 이미 사용 중)
 
 ```bash
-# 사용 중인 프로세스 확인 (Linux/macOS)
+# 사용 중인 프로세스 확인
 lsof -i :8080
+# 또는
+ss -tulnp | grep 8080
 
 # 다른 포트로 실행
 java -jar backend/target/github-activity-insight-1.0.0.jar --server.port=8081
-```
-
-```powershell
-# 사용 중인 프로세스 확인 (Windows PowerShell)
-netstat -ano | findstr :8080
 ```
 
 ### PostgreSQL 연결 실패
