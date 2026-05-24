@@ -161,7 +161,29 @@ public class AnalysisController {
 
     /** 분석 취소 */
     @PostMapping("/cancel/{requestId}")
-    public ResponseEntity<Void> cancel(@PathVariable String requestId) {
+    public ResponseEntity<?> cancel(
+            @PathVariable String requestId,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        Optional<User> userOpt = authenticatedUser(sessionId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+
+        Optional<AnalysisRequest> requestOpt = analysisService.getRequest(requestId);
+        if (requestOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOpt.get();
+        AnalysisRequest request = requestOpt.get();
+        String requestOwnerUserId = request.getUserId();
+        if (requestOwnerUserId != null && !requestOwnerUserId.equals(user.getUserId())) {
+            return ResponseEntity.status(403).body("본인 요청만 취소할 수 있습니다.");
+        }
+        if (requestOwnerUserId == null && !isOwner(user, request.getGithubId())) {
+            return ResponseEntity.status(403).body("본인 요청만 취소할 수 있습니다.");
+        }
+
         analysisService.cancel(requestId);
         return ResponseEntity.ok().build();
     }

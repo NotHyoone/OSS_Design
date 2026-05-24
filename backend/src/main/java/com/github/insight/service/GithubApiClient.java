@@ -168,10 +168,10 @@ public class GithubApiClient {
                 PullRequestData pr = new PullRequestData();
                 pr.setPrId(String.valueOf(item.getOrDefault("id", UUID.randomUUID())));
 
-                @SuppressWarnings("unchecked")
-                Map<String, Object> repoInfo = (Map<String, Object>) item.get("repository_url");
-                String repoName = repoInfo != null ? (String) repoInfo.get("name")
-                    : String.valueOf(item.getOrDefault("repository_url", ""));
+                    String repoUrl = (String) item.get("repository_url");
+                    String repoName = repoUrl != null && repoUrl.contains("/")
+                        ? repoUrl.substring(repoUrl.lastIndexOf("/") + 1)
+                        : "unknown";
                 pr.setRepoId(repoName);
 
                 pr.setState((String) item.getOrDefault("state", "open"));
