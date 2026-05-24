@@ -1,6 +1,8 @@
 package com.github.insight.service.auth;
 
+import com.github.insight.entity.UserEntity;
 import com.github.insight.model.User;
+import com.github.insight.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,18 +21,10 @@ public class AuthenticationService {
     private static final Logger log = LoggerFactory.getLogger(AuthenticationService.class);
 
     private final OAuthClient oauthClient;
+    private final UserRepository userRepository;
 
     @Value("${github.oauth.session-timeout-minutes:30}")
     private int sessionTimeoutMinutes;
-
-    /** sessionId → User */
-    private final Map<String, User> sessions = new ConcurrentHashMap<>();
-
-    /** sessionId → lastActivityTime */
-    private final Map<String, LocalDateTime> sessionActivity = new ConcurrentHashMap<>();
-
-    /** githubId → User (user store) */
-    private final Map<String, User> users = new ConcurrentHashMap<>();
 
     /** state → timestamp (CSRF 방어) */
     private final Map<String, LocalDateTime> pendingStates = new ConcurrentHashMap<>();
@@ -41,8 +35,9 @@ public class AuthenticationService {
     /** state 만료 시간(분) */
     private static final int STATE_EXPIRY_MINUTES = 10;
 
-    public AuthenticationService(OAuthClient oauthClient) {
+    public AuthenticationService(OAuthClient oauthClient, UserRepository userRepository) {
         this.oauthClient = oauthClient;
+        this.userRepository = userRepository;
     }
 
     public String initiateOAuthFlow() {
@@ -75,50 +70,79 @@ public class AuthenticationService {
         String displayName = (String) profile.getOrDefault("name", githubId);
         String avatarUrl  = (String) profile.getOrDefault("avatar_url", "");
 
-        User user = users.computeIfAbsent(githubId,
-            k -> new User(githubId, email != null ? email : "", displayName, avatarUrl));
-        user.setDisplayName(displayName);
-        user.setAvatarUrl(avatarUrl);
-        user.updateLastLogin();
+        UserEntity entity = userRepository.findByGithubId(githubId)
+            .orElseGet(UserEntity::new);
+        if (entity.getGithubId() == null || entity.getGithubId().isBlank()) {
+            entity.setGithubId(githubId);
+            entity.setCreatedAt(LocalDateTime.now());
+        }
+        entity.setEmail(email != null ? email : "");
+        entity.setDisplayName(displayName);
+        entity.setAvatarUrl(avatarUrl);
+        entity.updateLastLogin();
 
-        String sessionId = createSession(user);
-        user.setSessionId(sessionId);
-        users.put(githubId, user);
+        String sessionId = generateSessionId();
+        entity.setSessionId(sessionId);
+        userRepository.save(entity);
+
+        User user = toModel(entity);
 
         log.info("OAuth 로그인 성공: {}", githubId);
         return user;
     }
 
     public boolean validateSession(String sessionId) {
-        if (sessionId == null || !sessions.containsKey(sessionId)) return false;
-        LocalDateTime lastActivity = sessionActivity.get(sessionId);
-        if (lastActivity == null) return false;
+        if (sessionId == null || sessionId.isBlank()) return false;
+        Optional<UserEntity> entityOpt = userRepository.findBySessionId(sessionId);
+        if (entityOpt.isEmpty()) return false;
+
+        UserEntity entity = entityOpt.get();
+        LocalDateTime lastActivity = entity.getLastLoginAt();
+        if (lastActivity == null) {
+            invalidateSession(sessionId);
+            return false;
+        }
         if (lastActivity.plusMinutes(sessionTimeoutMinutes).isBefore(LocalDateTime.now())) {
             invalidateSession(sessionId);
             return false;
         }
-        sessionActivity.put(sessionId, LocalDateTime.now());
+
+        entity.updateLastLogin();
+        userRepository.save(entity);
         return true;
     }
 
     public void invalidateSession(String sessionId) {
-        User user = sessions.remove(sessionId);
-        sessionActivity.remove(sessionId);
-        if (user != null) {
-            user.setSessionId(null);
-        }
+        userRepository.findBySessionId(sessionId).ifPresent(entity -> {
+            entity.setSessionId(null);
+            userRepository.save(entity);
+        });
     }
 
     public String createSession(User user) {
+        if (user == null || user.getGithubId() == null || user.getGithubId().isBlank()) {
+            throw new IllegalArgumentException("유효하지 않은 사용자입니다.");
+        }
+
         String sessionId = generateSessionId();
-        sessions.put(sessionId, user);
-        sessionActivity.put(sessionId, LocalDateTime.now());
+        UserEntity entity = userRepository.findByGithubId(user.getGithubId())
+            .orElseGet(UserEntity::new);
+        if (entity.getGithubId() == null || entity.getGithubId().isBlank()) {
+            entity.setGithubId(user.getGithubId());
+            entity.setCreatedAt(user.getCreatedAt() != null ? user.getCreatedAt() : LocalDateTime.now());
+            entity.setEmail(user.getEmail() != null ? user.getEmail() : "");
+        }
+        entity.setDisplayName(user.getDisplayName());
+        entity.setAvatarUrl(user.getAvatarUrl());
+        entity.setSessionId(sessionId);
+        entity.updateLastLogin();
+        userRepository.save(entity);
         return sessionId;
     }
 
     public Optional<User> getUserBySession(String sessionId) {
         if (!validateSession(sessionId)) return Optional.empty();
-        return Optional.ofNullable(sessions.get(sessionId));
+        return userRepository.findBySessionId(sessionId).map(this::toModel);
     }
 
     public boolean isOAuthConfigured() {
@@ -137,23 +161,33 @@ public class AuthenticationService {
 
     /**
      * 1시간마다 만료된 세션을 정리한다.
-     * - sessions/sessionActivity: sessionTimeoutMinutes 초과 항목 제거
+     * - users.sessionId: sessionTimeoutMinutes 초과 항목 제거
      */
     @Scheduled(fixedDelay = 3_600_000)
     public void purgeExpiredSessions() {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(sessionTimeoutMinutes);
         int removedCount = 0;
-
-        for (String sessionId : sessions.keySet()) {
-            LocalDateTime lastActivity = sessionActivity.get(sessionId);
-            if (lastActivity != null && lastActivity.isBefore(cutoff)) {
-                invalidateSession(sessionId);
-                removedCount++;
-            }
+        for (UserEntity entity : userRepository.findBySessionIdIsNotNullAndLastLoginAtBefore(cutoff)) {
+            entity.setSessionId(null);
+            userRepository.save(entity);
+            removedCount++;
         }
 
         if (removedCount > 0) {
             log.info("만료된 세션 정리 완료: {}건 제거", removedCount);
         }
+    }
+
+    private User toModel(UserEntity entity) {
+        User user = new User();
+        user.setUserId(entity.getUserId());
+        user.setGithubId(entity.getGithubId());
+        user.setEmail(entity.getEmail());
+        user.setDisplayName(entity.getDisplayName());
+        user.setAvatarUrl(entity.getAvatarUrl());
+        user.setSessionId(entity.getSessionId());
+        user.setCreatedAt(entity.getCreatedAt());
+        user.setLastLoginAt(entity.getLastLoginAt());
+        return user;
     }
 }

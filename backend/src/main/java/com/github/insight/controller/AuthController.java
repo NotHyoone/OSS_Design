@@ -6,6 +6,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,9 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationService authService;
+
+    @Value("${github.oauth.cookie-secure:false}")
+    private boolean cookieSecure;
 
     public AuthController(AuthenticationService authService) {
         this.authService = authService;
@@ -56,7 +60,7 @@ public class AuthController {
 
             Cookie sessionCookie = new Cookie("SESSION_ID", user.getSessionId());
             sessionCookie.setHttpOnly(true);
-            sessionCookie.setSecure(true);
+              sessionCookie.setSecure(cookieSecure);
             sessionCookie.setPath("/");
             sessionCookie.setMaxAge(1800); // 30분
             response.addCookie(sessionCookie);
@@ -108,7 +112,7 @@ public class AuthController {
         }
         Cookie expiredCookie = new Cookie("SESSION_ID", "");
         expiredCookie.setHttpOnly(true);
-        expiredCookie.setSecure(true);
+          expiredCookie.setSecure(cookieSecure);
         expiredCookie.setPath("/");
         expiredCookie.setMaxAge(0);
         response.addCookie(expiredCookie);
