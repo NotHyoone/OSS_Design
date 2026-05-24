@@ -6,6 +6,7 @@ import com.github.insight.dto.CreateRequestBody;
 import com.github.insight.model.AnalysisRequest;
 import com.github.insight.model.AnalysisResult;
 import com.github.insight.model.Metrics;
+import com.github.insight.model.User;
 import com.github.insight.model.enums.RequestStatus;
 import com.github.insight.service.AnalysisService;
 import com.github.insight.service.ReportAssembler;
@@ -89,8 +90,12 @@ public class AnalysisController {
     public ResponseEntity<?> getResult(
             @PathVariable String githubId,
             @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
-        if (sessionId == null || authenticationService.getUserBySession(sessionId).isEmpty()) {
+        Optional<User> userOpt = authenticatedUser(sessionId);
+        if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+        if (!isOwner(userOpt.get(), githubId)) {
+            return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
         }
 
         Optional<AnalysisResult> resultOpt = analysisService.getLatestResult(githubId);
@@ -107,8 +112,12 @@ public class AnalysisController {
     public ResponseEntity<?> getHistory(
             @PathVariable String githubId,
             @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
-        if (sessionId == null || authenticationService.getUserBySession(sessionId).isEmpty()) {
+        Optional<User> userOpt = authenticatedUser(sessionId);
+        if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+        if (!isOwner(userOpt.get(), githubId)) {
+            return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
         }
 
         List<AnalysisResult> list = analysisService.getHistory(githubId);
@@ -128,8 +137,12 @@ public class AnalysisController {
     public ResponseEntity<?> downloadReport(
             @PathVariable String githubId,
             @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
-        if (sessionId == null || authenticationService.getUserBySession(sessionId).isEmpty()) {
+        Optional<User> userOpt = authenticatedUser(sessionId);
+        if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+        if (!isOwner(userOpt.get(), githubId)) {
+            return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
         }
 
         Optional<AnalysisResult> resultOpt = analysisService.getLatestResult(githubId);
@@ -151,5 +164,16 @@ public class AnalysisController {
     public ResponseEntity<Void> cancel(@PathVariable String requestId) {
         analysisService.cancel(requestId);
         return ResponseEntity.ok().build();
+    }
+
+    private Optional<User> authenticatedUser(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return Optional.empty();
+        }
+        return authenticationService.getUserBySession(sessionId);
+    }
+
+    private boolean isOwner(User user, String githubId) {
+        return user.getGithubId() != null && user.getGithubId().equalsIgnoreCase(githubId);
     }
 }

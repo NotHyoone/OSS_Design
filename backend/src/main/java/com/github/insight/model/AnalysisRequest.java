@@ -29,11 +29,42 @@ public class AnalysisRequest {
         return new AnalysisRequest(userId, githubId);
     }
 
+    public static AnalysisRequest restore(
+            String requestId,
+            String userId,
+            String githubId,
+            LocalDateTime requestedAt,
+            LocalDateTime completedAt,
+            String errorMessage,
+            RequestStatus status,
+            int retryCount,
+            int step,
+            double overallPct,
+            String detail) {
+        AnalysisRequest restored = new AnalysisRequest(
+                requestId,
+                userId,
+                githubId,
+                requestedAt != null ? requestedAt : LocalDateTime.now());
+        restored.completedAt = completedAt;
+        restored.errorMessage = errorMessage;
+        restored.status.set(status != null ? status : RequestStatus.PENDING);
+        restored.retryCount.set(Math.max(0, retryCount));
+        restored.step.set(Math.max(0, step));
+        restored.overallPct = overallPct;
+        restored.detail = detail != null ? detail : "대기 중...";
+        return restored;
+    }
+
     public AnalysisRequest(String userId, String githubId) {
-        this.requestId = UUID.randomUUID().toString();
+        this(UUID.randomUUID().toString(), userId, githubId, LocalDateTime.now());
+    }
+
+    private AnalysisRequest(String requestId, String userId, String githubId, LocalDateTime requestedAt) {
+        this.requestId = requestId;
         this.userId = userId;
         this.githubId = githubId;
-        this.requestedAt = LocalDateTime.now();
+        this.requestedAt = requestedAt;
     }
 
     public void updateStatus(RequestStatus newStatus) {

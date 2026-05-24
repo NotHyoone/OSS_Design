@@ -191,12 +191,19 @@ public class AnalysisRepository {
     }
 
     private AnalysisRequest convertToModel(AnalysisRequestEntity entity) {
-        AnalysisRequest model = new AnalysisRequest(entity.getUserId(), entity.getGithubId());
-        model.updateStatus(entity.getStatus());
-        if (entity.getCompletedAt() != null) {
-            model.updateProgress(entity.getStep(), entity.getOverallPct(), entity.getDetail());
-        }
-        return model;
+        return AnalysisRequest.restore(
+            entity.getRequestId(),
+            entity.getUserId(),
+            entity.getGithubId(),
+            entity.getRequestedAt(),
+            entity.getCompletedAt(),
+            entity.getErrorMessage(),
+            entity.getStatus(),
+            entity.getRetryCount(),
+            entity.getStep(),
+            entity.getOverallPct(),
+            entity.getDetail()
+        );
     }
 
     private AnalysisResultEntity convertResultToEntity(AnalysisResult model) {
