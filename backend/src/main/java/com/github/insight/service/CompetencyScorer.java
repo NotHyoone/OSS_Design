@@ -31,8 +31,6 @@ public class CompetencyScorer {
         result.setStrengths(identifyStrengths(metrics));
         result.setTrustLevel(metrics.getTrustLevel());
         result.setRuleVersion(ruleVersion);
-
-        List<String> weaknesses = identifyWeaknesses(metrics);
         result.setImprovements(new ArrayList<>());
         return result;
     }
