@@ -1,6 +1,6 @@
 # GitHub Activity Insight
 
-![GitHub Activity Insight Logo](images/logo_github_activity_insight.svg)
+![GitHub Activity Insight Logo](../assets/images/logo_github_activity_insight.svg)
 
 GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 
@@ -19,15 +19,16 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 | Revision date | Version # | Description | Author |
 | :--- | :--- | :--- | :--- |
 | 2026-05-11 | 1.0 | Initial draft | 안효원 |
-| 2026-05-11 | 1.1 | Added class diagram and descriptions | 안효원 |
-| 2026-05-14 | 1.2 | AnalysisService·AnalysisRepository 추가, 오케스트레이션 메서드 보완(collectAll/calculate/evaluate), AnalysisResult trustLevel 속성 추가, detectAnomalies 시그니처 수정, ReportGenerator 의존 관계 수정 | 안효원 |
-| 2026-05-22 | 1.3 | Added GitHub OAuth 2.0 authentication: User class, OAuthClient, AuthenticationService, Session management | 안효원 |
-| 2026-05-22 | 1.4 | Sequence Diagrams (SD-01~SD-04) 및 AnalysisRequest State Machine Diagram 추가 | 안효원 |
-| 2026-05-23 | 1.5 | Integrated security hardening: Global exception handling (GithubApiClient), URL injection defense (AuthenticationService), Enhanced BR-00 enforcement, Comprehensive input validation, PostgreSQL persistence model, Authentication on all endpoints | 안효원 |
-| 2026-05-24 | 1.6 | Removed Windows dependency, aligned implementation environment to Ubuntu 22.04+ / WSL2; completed Section 5 (Implementation requirements) and Section 7 (References) | 안효원 |
-| 2026-05-24 | 1.7 | Implementation alignment update: OAuth flow (state-only), API endpoint paths, anonymous request support, JSON report output, security/non-functional requirement corrections | 안효원 |
-| 2026-05-24 | 1.8 | Implementation sync pass: class signatures updated (GithubProfile/AnalysisRequest/ActivityData/Metrics/AnalysisResult/GithubApiClient/ReportAssembler/AuthenticationService), async-progress and state/sequence behavior aligned to current code | 안효원 |
-| 2026-05-26 | 1.9 | Implementation alignment update: PDF report generation (OpenPDF), GithubApiService removed, CompetencyScorer.evaluate() identifyWeaknesses call removed, CORS env-var configuration added | 안효원 |
+| 2026-05-11 | 1.1 | 클래스 다이어그램 초안 및 설명 추가 | 안효원 |
+| 2026-05-14 | 1.2 | AnalysisService·AnalysisRepository 추가; trustLevel 속성, detectAnomalies 시그니처, ReportGenerator 의존 관계 보완 | 안효원 |
+| 2026-05-22 | 1.3 | GitHub OAuth 2.0 인증 설계 추가: User, OAuthClient, AuthenticationService, Session | 안효원 |
+| 2026-05-22 | 1.4 | 시퀀스 다이어그램(SD-01~SD-04) 및 AnalysisRequest 상태 머신 다이어그램 추가 | 안효원 |
+| 2026-05-23 | 1.5 | 보안 강화: 전역 예외 처리, URL 인젝션 방어, 입력 검증, PostgreSQL 영속화 모델, 전 엔드포인트 인증 적용 | 안효원 |
+| 2026-05-24 | 1.6 | Ubuntu 22.04+ / WSL2 환경 정렬; Section 5(구현 요구사항) 및 Section 7(References) 완성 | 안효원 |
+| 2026-05-24 | 1.7 | 구현 정합: OAuth state 흐름, API 엔드포인트 경로, 비인증 요청 지원, 보안/비기능 요구사항 반영 | 안효원 |
+| 2026-05-24 | 1.8 | 클래스 시그니처 전반 동기화(GithubProfile·AnalysisRequest·Metrics 등); 비동기 진행 및 상태 전이 정합 | 안효원 |
+| 2026-05-26 | 1.9 | PDF 리포트(OpenPDF) 전환; GithubApiService 제거; CORS 환경변수 구성 추가 | 안효원 |
+| 2026-05-27 | 2.0 | SD-05(UC-07 리포트 다운로드) 및 SD-06(UC-08 이력 비교) 시퀀스 다이어그램 추가 | 안효원 |
 
 ---
 
@@ -1594,6 +1595,8 @@ classDiagram
 | SD-02 | UC-01~02 | GitHub ID 입력 및 분석 요청 생성 |
 | SD-03 | UC-03~05 | 분석 파이프라인 실행 (데이터 수집 → 지표 계산 → 점수·피드백 생성) |
 | SD-04 | UC-06 | 결과 조회 |
+| SD-05 | UC-07 | 리포트 다운로드 (PDF) |
+| SD-06 | UC-08 | 분석 이력 비교 |
 
 ---
 
@@ -1785,6 +1788,91 @@ sequenceDiagram
 
 ---
 
+### 3.6 SD-05: UC-07 리포트 다운로드
+
+분석 완료 후 사용자가 [리포트 다운로드] 버튼을 클릭하면 ReportGenerator가 OpenPDF를 사용하여 A4 PDF를 렌더링하고, 브라우저에 `application/pdf` 파일로 전달하는 흐름이다.
+
+```mermaid
+sequenceDiagram
+    actor User as User(Browser)
+    participant WebApp as WebApp
+    participant AnalysisCtrl as AnalysisController
+    participant AuthSvc as AuthenticationService
+    participant AnalysisSvc as AnalysisService
+    participant Repo as AnalysisRepository
+    participant Generator as ReportGenerator
+
+    User->>WebApp: Click [리포트 다운로드]
+    WebApp->>AnalysisCtrl: GET /api/analysis/report/{githubId}
+    AnalysisCtrl->>AuthSvc: validateSession(sessionId)
+    AuthSvc-->>AnalysisCtrl: true
+    Note over AnalysisCtrl: Verify owner(session.githubId == path.githubId)
+
+    AnalysisCtrl->>+AnalysisSvc: getLatestResult(githubId)
+    AnalysisSvc->>Repo: findFirstByGithubIdOrderByCreatedAtDesc(githubId)
+    Repo-->>AnalysisSvc: AnalysisResult
+    AnalysisSvc-->>-AnalysisCtrl: AnalysisResult + Metrics
+
+    AnalysisCtrl->>+Generator: renderPdf(result, metrics)
+    Note over Generator: ReportAssembler.toPdfModel() 호출
+    Note over Generator: OpenPDF로 A4 PDF 렌더링
+    Generator-->>-AnalysisCtrl: byte[]
+
+    AnalysisCtrl->>Generator: getFilename(githubId, createdAt)
+    Generator-->>AnalysisCtrl: "report_{githubId}_{yyyyMMdd_HHmmss}.pdf"
+
+    AnalysisCtrl-->>WebApp: 200 OK (application/pdf)<br/>Content-Disposition: attachment; filename=...
+    WebApp-->>User: PDF 파일 다운로드
+```
+
+[그림 3-5] SD-05: 리포트 다운로드 시퀀스 (UC-07)
+
+---
+
+### 3.7 SD-06: UC-08 분석 이력 비교
+
+사용자가 동일 GitHub ID의 복수 분석 결과를 선택해 점수·지표 변화를 비교하는 흐름이다. 이력이 2건 미만이면 새 분석 시작 유도 화면으로 전환한다.
+
+```mermaid
+sequenceDiagram
+    actor User as User(Browser)
+    participant WebApp as WebApp
+    participant AnalysisCtrl as AnalysisController
+    participant AuthSvc as AuthenticationService
+    participant AnalysisSvc as AnalysisService
+    participant Repo as AnalysisRepository
+    participant Assembler as ReportAssembler
+
+    User->>WebApp: Click [이력 비교]
+    WebApp->>AnalysisCtrl: GET /api/analysis/history/{githubId}
+    AnalysisCtrl->>AuthSvc: validateSession(sessionId)
+    AuthSvc-->>AnalysisCtrl: true
+    Note over AnalysisCtrl: Verify owner(session.githubId == path.githubId)
+
+    AnalysisCtrl->>+AnalysisSvc: getResultHistory(githubId)
+    AnalysisSvc->>Repo: findResultsByUserId(userId)
+    Repo-->>AnalysisSvc: List<AnalysisResult>
+    AnalysisSvc-->>-AnalysisCtrl: List<AnalysisResult>
+
+    alt 이력 2건 미만
+        AnalysisCtrl-->>WebApp: 200 OK (이력 부족 안내)
+        WebApp-->>User: 새 분석 시작 유도 화면
+    else 이력 2건 이상
+        User->>WebApp: 기준 시점 / 비교 시점 선택
+        WebApp->>AnalysisCtrl: POST /api/analysis/compare (baseId, targetId)
+        AnalysisCtrl->>+Assembler: toCompareModel(results)
+        Note over Assembler: 시점별 totalScore / Metrics 비교
+        Note over Assembler: 증감·증감율 계산 및 색상 코드 부여
+        Assembler-->>-AnalysisCtrl: CompareViewModel(Map)
+        AnalysisCtrl-->>WebApp: 200 OK
+        WebApp-->>User: Render History Compare Dashboard
+    end
+```
+
+[그림 3-6] SD-06: 분석 이력 비교 시퀀스 (UC-08)
+
+---
+
 ## 4. State Machine Diagram
 
 ### 4.1 개요
@@ -1963,4 +2051,3 @@ PostgreSQL 초기화 스크립트: `backend/scripts/init-postgres.sh`
 7. VMware (Pivotal), "Spring Boot Reference Documentation." Available: <https://docs.spring.io/spring-boot/docs/current/reference/html/> (accessed: 2026-05-11).
 8. D. Hardt (Ed.), "The OAuth 2.0 Authorization Framework," RFC 6749, IETF, 2012. Available: <https://tools.ietf.org/html/rfc6749>.
 9. N. Sakimura et al., "Proof Key for Code Exchange by OAuth Public Clients," RFC 7636, IETF, 2015. Available: <https://tools.ietf.org/html/rfc7636>.
-

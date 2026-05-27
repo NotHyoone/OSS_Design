@@ -52,7 +52,7 @@ Guidance for AI coding agents working in this repository.
 - Before finalizing backend changes, run `mvn -f backend/pom.xml test` at minimum. Skip only if Maven is unavailable or required local services are unreachable, and explicitly state the reason in your response.
 
 ## Docs To Consult (Link, Do Not Duplicate)
-- Run guide: `RUNNING.md`
-- Deployment guide: `DEPLOYMENT.md`
-- Database setup: `DATABASE.md`
+- Run guide: `docs/guides/running.md`
+- Deployment guide: `docs/guides/deployment.md`
+- Database setup: `docs/guides/database.md`
 - Project overview: `README.md`

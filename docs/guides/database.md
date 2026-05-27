@@ -247,5 +247,5 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8081"
 
 ## 📚 관련 문서
 
-- [RUNNING.md](RUNNING.md) - 빠른 시작 가이드
-- [DEPLOYMENT.md](DEPLOYMENT.md) - 배포 가이드
+- [running.md](running.md) - 빠른 시작 가이드
+- [deployment.md](deployment.md) - 배포 가이드

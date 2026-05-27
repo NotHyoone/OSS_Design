@@ -1,6 +1,6 @@
 # GitHub Activity Insight
 
-![GitHub Activity Insight Logo](images/logo_github_activity_insight.svg)
+![GitHub Activity Insight Logo](../assets/images/logo_github_activity_insight.svg)
 
 GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 
@@ -18,12 +18,13 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 
 | Revision date | Version # | Description | Author |
 | :--- | :--- | :--- | :--- |
-| 03/18/2026 | 1.01 | First draft | 안효원 |
-| 03/20/2026 | 1.02 | Base conceptualization structure | 안효원 |
-| 05/22/2026 | 1.03 | Added GitHub OAuth 2.0 authentication flow and user session management | 안효원 |
-| 05/23/2026 | 1.04 | Enhanced security: Global exception handling, URL injection defense, PR/Issue collection, detailed UC-00 specification, PostgreSQL migration documented | 안효원 |
-| 05/24/2026 | 1.05 | Synchronized UC list with Analysis (UC-01~UC-08); updated COO to match; added UC-02 분석 요청 생성, UC-08 분석 이력 비교; aligned deployment environment to Ubuntu 22.04+ / WSL2 | 안효원 |
-| 05/24/2026 | 1.06 | Synced with Design implementation: OAuth state-based flow, JSON report download, 429 rate-limit reset handling, updated security constraints | 안효원 |
+| 2026-03-18 | 1.01 | Initial draft | 안효원 |
+| 2026-03-20 | 1.02 | Base conceptualization structure | 안효원 |
+| 2026-05-22 | 1.03 | Added GitHub OAuth 2.0 authentication flow and user session management | 안효원 |
+| 2026-05-23 | 1.04 | Security hardening: detailed UC-00, exception handling, URL injection defense, PR/Issue collection, PostgreSQL migration | 안효원 |
+| 2026-05-24 | 1.05 | UC list synced with Analysis (UC-01~UC-08); COO updated; deployment environment aligned to Ubuntu 22.04+ / WSL2 | 안효원 |
+| 2026-05-24 | 1.06 | Design sync: OAuth state flow, rate-limit reset handling, security constraints updated | 안효원 |
+| 2026-05-27 | 1.07 | UC-07 and COO 4.7 updated to PDF output (OpenPDF); Glossary expanded with 10 new terms | 안효원 |
 
 ---
 
@@ -91,7 +92,7 @@ W -->|"6. Raw Activity Data"| A
 A -->|"7. Metrics"| E
 E -->|"8. Score + Feedback"| R
 W -->|"9. 분석 결과 저장"| D
-R -->|"10. 결과 조회 / 리포트(JSON)"| U
+R -->|"10. 결과 조회 / 리포트(PDF)"| U
 ```
 
 - Developer / Student: GitHub OAuth를 통해 인증하고 분석을 요청하며 결과를 조회하는 사용자
@@ -100,7 +101,7 @@ R -->|"10. 결과 조회 / 리포트(JSON)"| U
 - GitHub API: 저장소/커밋 활동 데이터 제공 외부 API (인증 토큰 기반)
 - Analysis Module: Raw Activity Data를 지표(Metrics)로 변환하는 분석 모듈
 - Evaluation & Feedback Engine: 지표 기반 점수 산정 및 피드백 생성 엔진
-- Report Generator: 점수/피드백을 시각화 및 JSON 리포트 형태로 제공하는 모듈
+- Report Generator: 점수/피드백을 시각화 및 PDF 리포트 형태로 제공하는 모듈
 - User DB / Analysis History: 사용자 정보, 세션, 분석 결과 및 이력 저장소
 - Authorization Request: 사용자를 GitHub OAuth 인증 페이지로 리다이렉트하는 요청
 - Grant & Callback: GitHub에서 사용자 승인 후 인증 코드를 반환하는 콜백
@@ -109,7 +110,7 @@ R -->|"10. 결과 조회 / 리포트(JSON)"| U
 - Raw Activity Data: GitHub API 응답에서 추출된 원천 활동 데이터
 - Metrics: 분석 모듈이 산출한 정량 지표
 - Score + Feedback: 평가 엔진이 생성한 점수 및 개선 가이드
-- Visualization / Report(JSON): 최종 사용자에게 제공되는 대시보드/문서 결과
+- Visualization / Report(PDF): 최종 사용자에게 제공되는 대시보드/문서 결과
 
 ---
 
@@ -173,7 +174,7 @@ R -->|"10. 결과 조회 / 리포트(JSON)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User |
-| Description | 사용자가 분석 결과를 JSON 리포트 파일로 다운로드한다. ReportGenerator가 결과 데이터를 JSON 바이트로 렌더링하여 제공한다. |
+| Description | 사용자가 분석 결과를 PDF 리포트 파일로 다운로드한다. ReportGenerator가 결과 데이터를 OpenPDF로 렌더링한 A4 PDF 바이트로 제공한다. |
 
 ### UC-08 분석 이력 비교
 
@@ -256,9 +257,9 @@ R -->|"10. 결과 조회 / 리포트(JSON)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 결과 문서화 지원 |
-| Approach | ReportGenerator가 저장된 분석 결과를 JSON 바이트로 렌더링하여 사용자에게 파일 다운로드로 제공한다. |
+| Approach | ReportGenerator가 저장된 분석 결과를 OpenPDF를 사용해 A4 PDF 바이트로 렌더링하여 사용자에게 파일 다운로드로 제공한다. |
 | Dynamics | 사용자 리포트 다운로드 요청 시 |
-| Goals | 포트폴리오 활용 가능한 리포트(JSON) 파일 제공 |
+| Goals | 포트폴리오 활용 가능한 리포트(PDF) 파일 제공 |
 
 ### 4.8 분석 이력 비교
 
@@ -316,9 +317,19 @@ R -->|"10. 결과 조회 / 리포트(JSON)"| U
 | Access Token | OAuth 인증 완료 후 GitHub API 호출 권한을 나타내는 토큰으로, 일정 시간 유효하며 refresh 메커니즘을 통해 갱신할 수 있다. |
 | Session | 사용자 인증 이후 웹 애플리케이션에서 사용자를 추적하는 메커니즘으로, 세션 ID와 타임아웃으로 관리된다. |
 | GitHub API | GitHub에서 제공하는 REST 및 GraphQL API로, 저장소, 커밋, 언어 등 활동 데이터를 수집하는 데 사용된다. |
-| Metrics | GitHub 활동 데이터를 기반으로 산출된 정량 지표로, 활동성, 기술 스택 다양성, 협업도, 지속성 등을 포함한다. |
+| ActivityData | GitHub API에서 수집한 원천 활동 데이터(저장소 목록, 커밋 로그, 언어 통계, PR/Issue 수 등)를 통합 보관하는 구조로, 지표 계산의 입력이 된다. |
+| Metrics | GitHub 활동 데이터를 기반으로 산출된 정량 지표로, 활동성(activityScore), 기술 스택 다양성(diversityScore), 협업도(collaborationScore), 지속성(persistenceScore) 등을 포함하며 각 0–100 척도로 표현된다. |
 | Competency Score | Metrics를 기반으로 산출된 역량 점수로, 개발자의 강점과 약점을 정량적으로 표현한다. |
 | Feedback | Competency Score와 Metrics를 해석하여 제공되는 개선 가이드로, 사용자가 포트폴리오를 개선할 수 있는 구체적인 행동 지침을 포함한다. |
+| FeedbackItem | 약점 목록으로부터 생성된 개별 개선 권고 항목. category, message, priority 속성을 가진다. |
+| AnalysisRequest | 특정 시점의 분석 실행 단위 및 상태(RequestStatus)를 추적하는 요청 엔티티. PENDING → RUNNING → COMPLETED/PARTIAL/FAILED 상태 전이를 관리한다. |
+| AnalysisResult | 분석 파이프라인의 최종 산출물. 종합 점수, 개발자 유형(DeveloperType), 강점/약점, 피드백 목록, 신뢰도(TrustLevel)를 포함한다. |
+| RequestStatus | AnalysisRequest의 상태 열거형. PENDING(대기) / RUNNING(실행 중) / COMPLETED(완료) / PARTIAL(부분 완료) / FAILED(실패) 값을 가진다. |
+| DeveloperType | 종합 점수 범위에 따라 분류된 개발자 수준 카테고리. BEGINNER(0–39점) / JUNIOR(40–69점) / ADVANCED(70–100점)로 구분된다. |
+| TrustLevel | 분석 결과의 데이터 완전성 및 신뢰도를 나타내는 4단계 등급. HIGH(완전성 90% 이상) / PARTIAL(일부 데이터 누락) / LOW(주요 데이터 부족) / LIMITED(이상치 필터링 또는 임계값 미달). |
+| Rate Limit | GitHub API 호출 횟수 제한 정책으로, 초과 시 일정 시간 요청이 제한(HTTP 429)되는 제약. |
+| RateLimit Reset Handling | API 429 응답의 X-RateLimit-Reset 헤더를 기반으로 재시도 가능 시각을 계산하여 요청을 지연 재시도하는 처리 전략. |
+| Pagination | 대량 API 응답을 여러 페이지로 분할해 Link 헤더를 따라 순차적으로 조회하는 방식. |
 
 ---
 

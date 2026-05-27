@@ -236,5 +236,5 @@ mvn clean install -U
 
 ## 추가 자료
 
-- **배포 가이드**: [DEPLOYMENT.md](DEPLOYMENT.md)
-- **프로젝트 개요**: [README.md](README.md)
+- **배포 가이드**: [deployment.md](deployment.md)
+- **프로젝트 개요**: [../../README.md](../../README.md)

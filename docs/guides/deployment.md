@@ -456,7 +456,7 @@ java -jar backend/target/github-activity-insight-1.0.0.jar --server.port=8081
 
 ## 참고 링크
 
-- [빠른 실행 가이드 (RUNNING.md)](RUNNING.md)
+- [빠른 실행 가이드 (running.md)](running.md)
 - [Spring Boot 외부 설정](https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config)
 - [PostgreSQL 공식 문서](https://www.postgresql.org/docs/)
 - [GitHub OAuth App 문서](https://docs.github.com/en/developers/apps/building-oauth-apps)
