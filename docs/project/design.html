@@ -290,14 +290,14 @@ classDiagram
         <h3>2.2 패키지 구조 및 계층도</h3>
         <div class="mermaid">
 graph TD
-    subgraph Authentication["🔐 Authentication Layer"]
+    subgraph Authentication["Authentication Layer"]
         A1["User"]
         A2["OAuthClient"]
         A3["AuthenticationService"]
         A4["GithubProfile"]
     end
 
-    subgraph Domain["📊 Domain Model Layer"]
+    subgraph Domain["Domain Model Layer"]
         D1["AnalysisRequest"]
         D2["ActivityData"]
         D3["Metrics"]
@@ -305,7 +305,7 @@ graph TD
         D5["FeedbackItem"]
     end
 
-    subgraph Services["⚙️ Service Layer"]
+    subgraph Services["Service Layer"]
         S1["GithubApiClient"]
         S2["MetricCalculator"]
         S3["CompetencyScorer"]

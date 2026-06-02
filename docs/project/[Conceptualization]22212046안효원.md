@@ -25,6 +25,8 @@ GitHub 기반 개발자 실력 분석 및 피드백 웹 시스템
 | 2026-05-24 | 1.05 | UC list synced with Analysis (UC-01~UC-08); COO updated; deployment environment aligned to Ubuntu 22.04+ / WSL2 | 안효원 |
 | 2026-05-24 | 1.06 | Design sync: OAuth state flow, rate-limit reset handling, security constraints updated | 안효원 |
 | 2026-05-27 | 1.07 | UC-07 and COO 4.7 updated to PDF output (OpenPDF); Glossary expanded with 10 new terms | 안효원 |
+| 2026-06-02 | 1.08 | Implementation sync: request-id result/report access, cancellation, OAuth state throttling, and scheduled retention cleanup added | 안효원 |
+| 2026-06-03 | 1.09 | Added implementation coverage note: local H2 execution, nullable anonymous requests, recent-history limit, and known UX constraints | 안효원 |
 
 ---
 
@@ -121,7 +123,7 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User, GitHub OAuth |
-| Description | 사용자가 GitHub OAuth 2.0을 통해 인증하고 세션을 생성한다. User가 [GitHub로 로그인] 버튼을 클릭하면 시스템이 state 기반 OAuth 플로우를 수행하고 AuthenticationService가 세션을 생성/관리한다. 인증 완료 후 사용자는 Home 화면에서 GitHub ID 분석을 시작할 수 있다. |
+| Description | 사용자가 GitHub OAuth 2.0을 통해 인증하고 세션을 생성한다. User가 [GitHub로 로그인] 버튼을 클릭하면 시스템이 state 기반 OAuth 플로우를 수행하고 AuthenticationService가 세션을 생성/관리한다. pending state는 10분 만료 및 최대 500개 제한으로 과도한 로그인 요청을 방어하며, 인증 완료 후 사용자는 Home 화면에서 GitHub ID 분석을 시작할 수 있다. |
 | Preconditions | 시스템 접속 가능 상태, GitHub OAuth App 등록 및 Client ID/Secret 설정 완료 |
 | Trigger | User가 Login 화면에서 [GitHub로 로그인] 버튼을 클릭할 때 |
 | Success Post Condition | system이 사용자를 인증하고 세션을 생성한 뒤 Home 화면으로 리다이렉트하고 [분석 시작] 버튼이 활성화된다 |
@@ -139,7 +141,7 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User, System |
-| Description | 사용자가 입력한 GitHub ID에 대해 AnalysisRequest를 생성하고 PENDING 상태로 DB에 저장한 후 비동기 분석 파이프라인을 시작한다. |
+| Description | 사용자가 입력한 GitHub ID에 대해 AnalysisRequest를 생성하고 PENDING 상태로 DB에 저장한 후 비동기 분석 파이프라인을 시작한다. 생성된 requestId는 진행률 조회, 요청 ID 기준 결과/리포트 조회, 분석 취소의 추적 키로 사용된다. |
 
 ### UC-03 GitHub 데이터 수집
 
@@ -167,14 +169,14 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User |
-| Description | 인증된 사용자가 자신의 분석 결과(점수, 지표, 피드백)를 대시보드에서 조회한다. 다른 사용자의 결과는 userId 기반 접근 제어로 차단된다. |
+| Description | 인증된 사용자가 자신의 분석 결과(점수, 지표, 피드백)를 대시보드에서 조회한다. 최신 결과는 GitHub ID 기준으로 조회하고, 진행 완료 직후에는 requestId 기준으로 특정 분석 결과를 직접 조회할 수 있다. 다른 사용자의 결과는 세션 및 소유권 검증으로 차단된다. |
 
 ### UC-07 리포트 다운로드
 
 | 항목 | 내용 |
 | :--- | :--- |
 | Actor | User |
-| Description | 사용자가 분석 결과를 PDF 리포트 파일로 다운로드한다. ReportGenerator가 결과 데이터를 OpenPDF로 렌더링한 A4 PDF 바이트로 제공한다. |
+| Description | 사용자가 분석 결과를 PDF 리포트 파일로 다운로드한다. ReportGenerator가 결과 데이터를 OpenPDF로 렌더링한 A4 PDF 바이트로 제공하며, 최신 결과 다운로드와 requestId 기준 특정 결과 다운로드를 모두 지원한다. |
 
 ### UC-08 분석 이력 비교
 
@@ -194,7 +196,7 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 사용자 인증 및 세션 생성 |
-| Approach | User가 [GitHub로 로그인] 버튼을 클릭하면 AuthenticationService가 state 기반 GitHub OAuth 2.0 인증을 수행하고 세션 ID를 HttpOnly 쿠키에 저장한다. |
+| Approach | User가 [GitHub로 로그인] 버튼을 클릭하면 AuthenticationService가 state 기반 GitHub OAuth 2.0 인증을 수행하고 세션 ID를 HttpOnly 쿠키에 저장한다. state는 단일 사용 후 제거되며 10분 만료, 최대 500개 pending state 제한을 적용한다. `/auth/me`, `/auth/logout`, `/auth/config` 보조 API로 로그인 상태 확인, 로그아웃, OAuth 설정 확인을 제공한다. |
 | Dynamics | 사용자가 시스템에 최초 접근할 때 |
 | Goals | 인증된 사용자 세션 확보 후 GitHub ID 분석 입력 활성화 |
 
@@ -212,7 +214,7 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 분석 파이프라인 초기화 |
-| Approach | AnalysisRequest 객체를 PENDING 상태로 DB에 저장하고 AnalysisAsyncRunner가 비동기 분석 파이프라인을 시작한다. |
+| Approach | AnalysisRequest 객체를 PENDING 상태로 DB에 저장하고 AnalysisAsyncRunner가 비동기 분석 파이프라인을 시작한다. requestId를 반환하여 진행률 폴링, 결과 직접 조회, PDF 직접 다운로드, 사용자 취소 요청에 활용한다. |
 | Dynamics | GitHub ID 유효성 검사 통과 직후 |
 | Goals | 분석 요청 영속화 및 비동기 처리 시작 |
 
@@ -248,7 +250,7 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 분석 결과 제공 |
-| Approach | 인증된 사용자가 자신의 분석 결과를 대시보드에서 조회한다. userId 기반 접근 제어로 타인의 결과 조회를 차단한다. |
+| Approach | 인증된 사용자가 자신의 분석 결과를 대시보드에서 조회한다. 최신 결과는 GitHub ID 기준으로, 진행 완료 직후 특정 결과는 requestId 기준으로 조회할 수 있으며 세션 및 소유권 검증으로 타인의 결과 조회를 차단한다. |
 | Dynamics | 사용자 결과 조회 요청 시 |
 | Goals | 사용자에게 해석 가능한 점수/피드백 제공 |
 
@@ -257,7 +259,7 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 항목 | 내용 |
 | :--- | :--- |
 | Purpose | 결과 문서화 지원 |
-| Approach | ReportGenerator가 저장된 분석 결과를 OpenPDF를 사용해 A4 PDF 바이트로 렌더링하여 사용자에게 파일 다운로드로 제공한다. |
+| Approach | ReportGenerator가 저장된 분석 결과를 OpenPDF를 사용해 A4 PDF 바이트로 렌더링하여 사용자에게 파일 다운로드로 제공한다. 최신 결과뿐 아니라 requestId로 지정한 특정 분석 결과의 PDF도 다운로드할 수 있다. |
 | Dynamics | 사용자 리포트 다운로드 요청 시 |
 | Goals | 포트폴리오 활용 가능한 리포트(PDF) 파일 제공 |
 
@@ -276,6 +278,27 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 
 본 프로젝트는 선택적 기능 및 비기능 요구사항 만족, 아키텍처 설계, 그리고 지속 가능한 운영을 위한 다양한 도전 과제를 갖고 있다.
 
+### 5.1 Implementation coverage and remaining gaps
+
+현재 구현은 Concept 단계에서 정의한 핵심 흐름을 대부분 반영한다. Spring Boot 백엔드가 REST API와 `web/` 정적 프론트엔드를 함께 제공하며, 로컬 프로필은 H2 파일 DB(`./data/insight`), 기본 프로필은 PostgreSQL 검증 모드(`ddl-auto=validate`)를 사용한다. 분석 요청은 로그인 사용자와 비로그인 사용자 모두 생성할 수 있도록 `analysis_requests.user_id`를 nullable로 두며, 로그인 사용자의 결과/이력/리포트 조회는 세션과 GitHub ID 소유권으로 보호한다. 비로그인 요청은 requestId 기준 결과/리포트 조회를 허용하여 분석 완료 직후 Progress 화면에서 Result/PDF로 이어지는 흐름을 지원한다.
+
+구현 반영 완료 항목은 다음과 같다.
+
+- OAuth 로그인, `/auth/me`, `/auth/logout`, `/auth/config` 기반 인증 상태 관리
+- GitHub ID 형식 검증 및 실존 사용자 확인 API
+- `AnalysisAsyncRunner` 기반 비동기 분석 처리와 단계별 진행률 조회
+- 저장소, 커밋, 언어, PR, Issue 데이터 수집과 4개 지표 계산
+- 종합 점수, DeveloperType, TrustLevel, 강점/개선 피드백 생성
+- requestId 기준 결과 조회 및 PDF 다운로드
+- 사용자 취소 시 `CANCELLED` 상태 전환
+- 최근 10건 중심 이력 조회와 스케줄러 기반 만료 데이터 정리
+
+남은 보완 사항은 다음과 같다.
+
+- History Compare 화면은 메뉴가 항상 노출되지만, 실제 이력 API는 로그인 및 본인 GitHub ID 소유권을 요구하므로 비로그인 사용자는 이력 데이터를 조회할 수 없다. 비로그인 사용자에게 로그인 유도 메시지를 더 명확히 제공해야 한다.
+- OAuth Client ID/Secret이 없으면 로그인은 설정 안내 응답으로 제한된다. 운영 배포 전 GitHub OAuth App 설정과 콜백 URL 정합성 검증이 필요하다.
+- 현재 결과 정확도는 공개 GitHub 데이터와 API rate limit에 의존한다. 비공개 저장소, 조직 내부 활동, 코드 리뷰 품질은 분석 대표성 한계로 남는다.
+
 **GitHub Activity Insight의 Problem Statement는 다음과 같다:**
 
 1. **데이터 수집 신뢰성 문제:** GitHub API rate limit, 일시적 네트워크 오류, 페이징 누락으로 인해 데이터 불완전성이 발생할 수 있으며, 이는 분석 결과의 정확성을 저해한다.
@@ -290,6 +313,8 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 
 6. **개인정보 및 보안 문제:** GitHub ID, 분석 이력, 리포트 파일 저장 과정에서 접근 제어가 미흡하면 개인정보 유출 및 무단 접근 위험이 발생한다.
 
+7. **운영 데이터 보관 문제:** 분석 요청, 지표, 결과가 계속 누적되면 로컬 개발 DB와 운영 DB 모두에서 저장 공간과 조회 성능 문제가 발생할 수 있다. 따라서 최근 이력 중심 조회와 만료 데이터 정리 정책이 필요하다.
+
 **비기능 요구사항(NFRs):**
 
 | 구분 | 요구사항 | 목표 기준 |
@@ -299,12 +324,15 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | 성능 (Performance) | 1회 분석 완료 시간 | 공개 저장소 30개 기준 60초 이내 |
 | 가용성 (Availability) | 서비스 운영 가능 시간 | 월간 가용성 99.5% 이상 |
 | 신뢰성 (Reliability) | 데이터 수집 실패 복구 | 실패 요청 자동 재시도 3회, 실패 로그 100% 기록 |
+| 신뢰성 (Reliability) | 사용자 취소 처리 | 진행 중인 분석 요청은 소유권 검증 후 CANCELLED 상태로 전환 가능 |
 | 확장성 (Scalability) | 동시 사용자 처리 | 동시 분석 요청 100건 이상에서 기능 저하 없이 처리 |
+| 확장성 (Scalability) | OAuth 로그인 요청 보호 | pending OAuth state 500개 초과 시 과부하 응답, state 10분 만료 |
 | 보안 (Security) | 인증 및 권한 관리 | GitHub OAuth 2.0 표준 준수, state 단일 사용 검증, 인증 코드 단일 사용 |
 | 보안 (Security) | 세션 관리 | HttpOnly 필수, Secure는 환경설정 기반 적용, 세션 타임아웃 30분 |
 | 보안 (Security) | 사용자 데이터 보호 | 전송 구간 TLS 적용, 저장 데이터 최소화 및 접근 권한 분리 |
 | 사용성 (Usability) | 결과 이해 용이성 | 점수마다 근거 지표와 개선 액션 1개 이상 제공 |
 | 유지보수성 (Maintainability) | 모델/지표 변경 용이성 | 지표 산출 모듈 분리로 규칙 변경 시 핵심 코드 수정 범위 최소화 |
+| 유지보수성 (Maintainability) | 데이터 보관 관리 | 완료/실패 요청과 분석 결과는 스케줄러로 정기 정리하고 이력 목록은 최근 항목 중심으로 제공 |
 | 환경 (Environment) | 실행 환경 | Ubuntu 22.04+ 또는 WSL2 (Ubuntu), Java 17 이상, Maven 3.8 이상 |
 
 ---
@@ -322,14 +350,16 @@ R -->|"10. 결과 조회 / 리포트(PDF)"| U
 | Competency Score | Metrics를 기반으로 산출된 역량 점수로, 개발자의 강점과 약점을 정량적으로 표현한다. |
 | Feedback | Competency Score와 Metrics를 해석하여 제공되는 개선 가이드로, 사용자가 포트폴리오를 개선할 수 있는 구체적인 행동 지침을 포함한다. |
 | FeedbackItem | 약점 목록으로부터 생성된 개별 개선 권고 항목. category, message, priority 속성을 가진다. |
-| AnalysisRequest | 특정 시점의 분석 실행 단위 및 상태(RequestStatus)를 추적하는 요청 엔티티. PENDING → RUNNING → COMPLETED/PARTIAL/FAILED 상태 전이를 관리한다. |
+| AnalysisRequest | 특정 시점의 분석 실행 단위 및 상태(RequestStatus)를 추적하는 요청 엔티티. PENDING → RUNNING → COMPLETED/PARTIAL/CANCELLED/FAILED 상태 전이를 관리한다. |
+| Request ID | AnalysisRequest를 식별하는 고유 ID. 진행률 조회, 요청 ID 기준 결과 조회, 요청 ID 기준 PDF 다운로드, 분석 취소에 사용된다. |
 | AnalysisResult | 분석 파이프라인의 최종 산출물. 종합 점수, 개발자 유형(DeveloperType), 강점/약점, 피드백 목록, 신뢰도(TrustLevel)를 포함한다. |
-| RequestStatus | AnalysisRequest의 상태 열거형. PENDING(대기) / RUNNING(실행 중) / COMPLETED(완료) / PARTIAL(부분 완료) / FAILED(실패) 값을 가진다. |
+| RequestStatus | AnalysisRequest의 상태 열거형. PENDING(대기) / RUNNING(실행 중) / COMPLETED(완료) / PARTIAL(부분 완료) / CANCELLED(사용자 취소) / FAILED(실패) 값을 가진다. |
 | DeveloperType | 종합 점수 범위에 따라 분류된 개발자 수준 카테고리. BEGINNER(0–39점) / JUNIOR(40–69점) / ADVANCED(70–100점)로 구분된다. |
 | TrustLevel | 분석 결과의 데이터 완전성 및 신뢰도를 나타내는 4단계 등급. HIGH(완전성 90% 이상) / PARTIAL(일부 데이터 누락) / LOW(주요 데이터 부족) / LIMITED(이상치 필터링 또는 임계값 미달). |
 | Rate Limit | GitHub API 호출 횟수 제한 정책으로, 초과 시 일정 시간 요청이 제한(HTTP 429)되는 제약. |
 | RateLimit Reset Handling | API 429 응답의 X-RateLimit-Reset 헤더를 기반으로 재시도 가능 시각을 계산하여 요청을 지연 재시도하는 처리 전략. |
 | Pagination | 대량 API 응답을 여러 페이지로 분할해 Link 헤더를 따라 순차적으로 조회하는 방식. |
+| Retention Cleanup | 오래된 분석 요청, 결과, 지표 데이터를 정기적으로 삭제하여 저장소 크기와 조회 성능을 관리하는 스케줄러 기반 정리 정책. |
 
 ---
 

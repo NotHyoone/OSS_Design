@@ -6,159 +6,140 @@
 | :-- | :-- | :-- | :-- | :-- |
 | 1 | User | Entity | 서비스 사용자 식별, 기본 프로필/권한 정보 보관 | GithubProfile, AnalysisRequest, AnalysisResult |
 | 2 | GithubProfile | Entity | GitHub 계정 식별자와 검증 상태, 공개 프로필 메타데이터 보관 | User, AnalysisRequest |
-| 3 | AnalysisRequest | Entity | 분석 요청 상태 관리(PENDING/RUNNING/COMPLETED/FAILED/PARTIAL), 요청 시점과 처리 이력 관리 | User, GithubProfile, ActivityCollector |
-| 4 | ActivityData | Value Object | 저장소, 커밋, PR, Issue, 언어 통계 등 원천 활동 데이터 묶음 표현 | ActivityCollector, DataNormalizer, MetricCalculator |
+| 3 | AnalysisRequest | Domain Model / Entity Mapping | 분석 요청 상태 관리(PENDING/RUNNING/COMPLETED/PARTIAL/CANCELLED/FAILED), 진행 단계(step/overallPct/detail), 요청 시점과 처리 이력 관리 | User, AnalysisService, AnalysisAsyncRunner, AnalysisRepository |
+| 4 | ActivityData | Value Object | 저장소, 커밋, PR, Issue, 언어 통계 등 원천 활동 데이터 묶음 표현 | GithubApiClient, AnalysisService, MetricCalculator |
 | 5 | Metrics | Value Object | 활동성, 다양성, 협업도, 지속성, 신뢰도 등 정량 지표 묶음 표현 | MetricCalculator, CompetencyScorer, FeedbackGenerator |
 | 6 | FeedbackItem | Value Object | 강점, 약점, 개선 액션을 우선순위와 함께 표현 | FeedbackGenerator, AnalysisResult |
 | 7 | AnalysisResult | Entity | totalScore, developerType, Metrics, FeedbackItem 목록을 포함한 최종 결과 보관 | User, AnalysisRequest, ReportAssembler |
-| 8 | GithubApiClient | Infrastructure | GitHub REST/GraphQL 호출, 페이징, Rate Limit, 재시도 처리 | ActivityCollector |
-| 9 | ActivityCollector | Service | API 응답을 모아 ActivityData 생성 | GithubApiClient, DataNormalizer |
-| 10 | DataNormalizer | Service | ActivityData를 계산 가능한 구조로 정규화하고 누락값/이상치 보정 | ActivityCollector, MetricCalculator |
-| 11 | MetricCalculator | Service | 정규화된 ActivityData로부터 4개 핵심 지표 계산 | DataNormalizer, CompetencyScorer |
-| 12 | CompetencyScorer | Service | Metrics 기반 totalScore 및 developerType 계산 | MetricCalculator, FeedbackGenerator, AnalysisResult |
-| 13 | FeedbackGenerator | Service | Metrics와 점수 해석 결과를 FeedbackItem 목록으로 생성 | CompetencyScorer, AnalysisResult |
-| 14 | ReportAssembler | Service | AnalysisResult를 화면/PDF용 ViewModel로 조립 | AnalysisResult, ReportGenerator |
-| 15 | ReportGenerator | Service | 대시보드 렌더링 및 PDF 생성 | ReportAssembler |
+| 8 | GithubApiClient | Infrastructure | GitHub REST API 호출, 사용자 검증, 저장소/커밋/언어/PR/Issue 수집, Rate Limit 처리 | AnalysisService |
+| 9 | AnalysisService | Service | 분석 요청 생성, 활성 요청 재사용, 비동기 실행 트리거, 결과/이력/메트릭 조회, 취소 처리 | GithubApiClient, MetricCalculator, CompetencyScorer, FeedbackGenerator, AnalysisRepository, AnalysisAsyncRunner |
+| 10 | AnalysisAsyncRunner | Service | Spring `@Async` 프록시를 통해 분석 파이프라인을 별도 스레드에서 실행 | AnalysisService |
+| 11 | MetricCalculator | Service | ActivityData로부터 4개 핵심 지표 계산 및 신뢰도/설명 생성 | CompetencyScorer |
+| 12 | CompetencyScorer | Service | Metrics 기반 totalScore, DeveloperType, strengths/weaknesses 계산 | MetricCalculator, FeedbackGenerator, AnalysisResult |
+| 13 | FeedbackGenerator | Service | 약점 목록을 FeedbackItem 개선 권고로 변환 | CompetencyScorer, AnalysisResult |
+| 14 | ReportAssembler | Service | AnalysisResult와 Metrics를 화면/PDF용 Map ViewModel로 조립 | AnalysisResult, ReportGenerator |
+| 15 | ReportGenerator | Service | OpenPDF 기반 A4 PDF 바이트와 다운로드 파일명 생성 | ReportAssembler |
+| 16 | AnalysisRepository | Service / Persistence Adapter | JPA Repository를 감싸 도메인 모델과 Entity 변환, 최근 10건 이력 제한, 만료 데이터 정리 수행 | AnalysisRequestRepository, AnalysisResultRepository, MetricsRepository |
 
 ---
 
-## 2) 메서드 시그니처 초안 (Java)
+## 2) 현재 구현 기준 주요 메서드 시그니처 (Java)
 
-아래 시그니처는 최신 분석 문서의 도메인 모델을 2.2/2.3 설계 단계로 연결하기 위한 1차 인터페이스 초안이다.
+아래 시그니처는 초기 설계 초안이 아니라 현재 `backend/src/main/java/com/github/insight` 구현을 기준으로 정리한 스냅샷이다. 세부 DTO/Entity getter/setter는 생략하고, 유스케이스 흐름을 설명하는 핵심 메서드만 포함한다.
 
 ```java
-// 1) User
-public class User {
-    private Long id;
-    private String email;
-    private String displayName;
-
-    public void updateDisplayName(String displayName);
-    public boolean isSameUser(Long userId);
+// AuthenticationService
+public class AuthenticationService {
+    public boolean isOAuthConfigured();
+    public String initiateOAuthFlow();
+    public User handleOAuthCallback(String code, String state);
+    public Optional<User> getUserBySession(String sessionId);
+    public void invalidateSession(String sessionId);
+    public void purgeExpiredSessions();
 }
 
-// 2) GithubProfile
-public class GithubProfile {
-    private Long id;
-    private Long userId;
-    private String githubUsername;
-    private String profileUrl;
-   private boolean validated;
-
-    public void changeGithubUsername(String githubUsername);
-    public boolean matches(String githubUsername);
-   public void markValidated();
+// OAuthClient
+public class OAuthClient {
+    public boolean isConfigured();
+    public String getAuthorizationUrl(String state);
+    public String exchangeCodeForToken(String code);
+    public User getUserProfile(String accessToken);
 }
 
-// 3) AnalysisRequest
+// AnalysisRequest
 public class AnalysisRequest {
-    private Long id;
-    private Long userId;
-    private String githubUsername;
-    private AnalysisStatus status;
-    private java.time.Instant requestedAt;
-    private java.time.Instant finishedAt;
-   private Integer queuePosition;
-
-    public void markRunning();
-   public void markCompleted();
-   public void markPartial(String reason);
-    public void markFailed(String reason);
-    public boolean isTerminal();
+    public static AnalysisRequest create(String userId, String githubId);
+    public static AnalysisRequest restore(...);
+    public boolean transitionTo(RequestStatus newStatus);
+    public void updateProgress(int step, double overallPct, String detail);
+    public void markDone();
+    public void markError(String message);
+    public void markCancelled(String message);
+    public boolean isRunning();
+    public boolean isCancelled();
+    public boolean canRetry();
+    public void incrementRetry();
 }
 
-// 4) ActivityData
-public record ActivityData(
-   int repositoryCount,
-   int commitCount,
-   int pullRequestCount,
-   int issueCount,
-   java.util.Map<String, Double> languageBreakdown,
-   String collectionStatus
-) {}
-
-// 5) Metrics
-public record Metrics(
-   double activityScore,
-   double diversityScore,
-   double collaborationScore,
-   double consistencyScore,
-   String trustLevel,
-   String notes
-) {}
-
-// 6) FeedbackItem
-public record FeedbackItem(
-   String category,
-   String message,
-   String priority
-) {}
-
-// 7) AnalysisResult
-public class AnalysisResult {
-   private Long id;
-   private Long requestId;
-   private double totalScore;
-   private String developerType;
-   private Metrics metrics;
-   private java.util.List<FeedbackItem> feedbackItems;
-   private java.time.Instant createdAt;
-
-   public void assignScore(double totalScore, String developerType);
-   public void attachMetrics(Metrics metrics);
-   public void attachFeedbackItems(java.util.List<FeedbackItem> feedbackItems);
+// GithubApiClient
+public class GithubApiClient {
+    public boolean validateUserExists(String githubId);
+    public ActivityData collectAll(String githubId);
+    public List<RepositoryData> getRepositories(String githubId);
+    public List<CommitData> getCommits(String githubId, String repoName);
+    public Map<String, Integer> getLanguages(String githubId, String repoName);
+    public List<PullRequestData> getPullRequests(String githubId);
+    public List<IssueData> getIssues(String githubId);
 }
 
-// 8) GithubApiClient
-public interface GithubApiClient {
-    RepoActivityResponse fetchRepositories(String githubUsername, int page, int perPage);
-    CommitActivityResponse fetchCommits(String githubUsername, String repoName, int page, int perPage);
-   LanguageStatsResponse fetchLanguages(String githubUsername, String repoName);
-   CollaborationResponse fetchCollaborations(String githubUsername);
+// AnalysisService + Async Runner
+public class AnalysisService {
+    public AnalysisRequest requestAnalysis(String userId, String githubId);
+    public AnalysisRequest createRequest(String githubId);
+    public void executeAnalysis(AnalysisRequest request);
+    public Optional<AnalysisRequest> getRequest(String requestId);
+    public Optional<AnalysisResult> getLatestResult(String githubId);
+    public AnalysisResult getResult(String requestId);
+    public List<AnalysisResult> getHistory(String githubId);
+    public Optional<Metrics> getMetrics(String requestId);
+    public void cancel(String requestId);
+    public void retryFailedAnalysis(String requestId);
 }
 
-// 9) ActivityCollector
-public interface ActivityCollector {
-   ActivityData collect(String githubUsername);
-   ActivityData collectWithinPeriod(String githubUsername, java.time.LocalDate from, java.time.LocalDate to);
+public class AnalysisAsyncRunner {
+    @Async("analysisExecutor")
+    public void run(AnalysisRequest request);
 }
 
-// 10) DataNormalizer
-public interface DataNormalizer {
-   ActivityData normalize(ActivityData raw);
-   ActivityData removeOutliers(ActivityData normalized);
+// Metric / Score / Feedback
+public class MetricCalculator {
+    public Metrics calculate(ActivityData data);
+    public float calculateActivity(ActivityData data);
+    public float calculateDiversity(ActivityData data);
+    public float calculateCollaboration(ActivityData data);
+    public float calculatePersistence(ActivityData data);
 }
 
-// 11) MetricCalculator
-public interface MetricCalculator {
-   Metrics calculate(ActivityData data);
-   java.util.Map<String, Double> calculateSubMetrics(ActivityData data);
+public class CompetencyScorer {
+    public AnalysisResult evaluate(Metrics metrics);
+    public int score(Metrics metrics);
+    public DeveloperType classifyType(int score);
+    public List<String> identifyStrengths(Metrics metrics);
+    public List<String> identifyWeaknesses(Metrics metrics);
 }
 
-// 12) CompetencyScorer
-public interface CompetencyScorer {
-   AnalysisResult score(Metrics metrics);
-   java.util.Map<String, Integer> scoreByCategory(Metrics metrics);
+public class FeedbackGenerator {
+    public List<FeedbackItem> generate(List<String> weaknesses);
 }
 
-// 13) FeedbackGenerator
-public interface FeedbackGenerator {
-   java.util.List<FeedbackItem> generate(AnalysisResult result, Metrics metrics);
-   java.util.List<FeedbackItem> suggestActionItems(AnalysisResult result, Metrics metrics);
+// Report / Persistence
+public class ReportAssembler {
+    public Map<String, Object> toViewModel(AnalysisResult result, Metrics metrics);
+    public Map<String, Object> toPdfModel(AnalysisResult result, Metrics metrics);
 }
 
-// 14) ReportAssembler
-public interface ReportAssembler {
-   DashboardView assembleDashboard(AnalysisResult result);
-   PdfReportView toPdfView(AnalysisResult result);
+public class ReportGenerator {
+    public byte[] renderPdf(AnalysisResult result, Metrics metrics);
+    public String getFilename(String githubId, LocalDateTime createdAt);
 }
 
-// 15) ReportGenerator
-public interface ReportGenerator {
-   void renderDashboard(DashboardView view);
-   byte[] exportPdf(PdfReportView view);
+public class AnalysisRepository {
+    public void save(AnalysisRequest request);
+    public AnalysisRequest findById(String requestId);
+    public Optional<String> findActiveRequestId(String githubId);
+    public void saveResult(AnalysisResult result);
+    public void saveMetrics(String requestId, Metrics metrics);
+    public AnalysisResult findResultByRequestId(String requestId);
+    public Optional<AnalysisResult> findLatestResultByGithubId(String githubId);
+    public List<AnalysisResult> findResultsByGithubId(String githubId);
+    public List<AnalysisResult> findResultsByUserId(String userId);
+    public Optional<Metrics> findMetricsByRequestId(String requestId);
+    @Scheduled(fixedDelay = 3_600_000)
+    public void purgeExpired();
 }
 ```
+
+---
 
 ---
 
@@ -168,16 +149,16 @@ public interface ReportGenerator {
 
 | Layer | Stack | 선택 이유 |
 | :-- | :-- | :-- |
-| Backend | Java 21, Spring Boot 3.x | 수업 요구(Java) 충족, 모듈 분리 용이 |
-| API Client | Spring WebClient or OpenFeign | GitHub API 호출/재시도/타임아웃 정책 구현 용이 |
-| Database | PostgreSQL + Spring Data JPA | 분석 이력/결과 저장 및 조회 안정성 |
-| Cache/Queue(옵션) | Redis + Spring Cache | 반복 조회 성능 개선, 호출량 완화 |
-| Auth(초기 단순) | Spring Security (email login or GitHub OAuth) | 사용자별 이력 접근 제어 |
-| PDF | OpenHTMLtoPDF or iText | 분석 결과 PDF 내보내기 |
-| Frontend | React + TypeScript + Vite | 대시보드/차트 UI 빠른 구현 |
-| Chart | Recharts or ECharts | 지표 시각화 |
-| Infra | Docker Compose | 로컬 개발 환경 재현성 확보 |
-| Test | JUnit 5, Mockito, Testcontainers | 계산/평가 로직 신뢰성 확보 |
+| Backend | Java 17, Spring Boot 3.2.x | 현재 `backend/pom.xml` 기준. 수업 요구(Java) 충족, 모듈 분리 용이 |
+| API Client | Spring RestTemplate 기반 `GithubApiClient` | 현재 구현 기준. GitHub REST API 호출, 사용자 검증, 이벤트/저장소/언어 수집 처리 |
+| Database | PostgreSQL(default) + H2(local) + Spring Data JPA | 운영은 PostgreSQL `ddl-auto=validate`, 로컬은 H2 file DB `ddl-auto=create` |
+| Async | Spring `@Async` + `ThreadPoolTaskExecutor` | 현재 분석 실행 방식. Redis/외부 큐는 미적용 |
+| Auth | GitHub OAuth 2.0 + HttpOnly SESSION_ID Cookie | 현재 구현 기준. Spring Security는 별도 적용하지 않음 |
+| PDF | OpenPDF | 현재 구현 기준. 서버에서 A4 PDF 바이트 생성 |
+| Frontend | 정적 HTML/CSS/Vanilla JS (`web/`) | 현재 구현 기준. Spring Boot가 `file:web/`로 직접 서빙 |
+| Chart/UI | Vanilla JS, SVG/CSS 게이지, Canvas sparkline | 현재 구현 기준. 외부 차트 라이브러리 미적용 |
+| Infra | Maven 실행 + PostgreSQL 초기화 스크립트 | 현재 문서화된 실행 방식. Docker Compose는 미적용 |
+| Test | JUnit 5, Spring Boot Test, Mockito | 현재 Maven 테스트 기준. Testcontainers는 미적용 |
 
 초기 MVP에서는 Redis/Queue를 제외하고 시작해도 된다.
 
@@ -287,3 +268,13 @@ public interface ReportGenerator {
 2. 2.3에서 10개 클래스의 클래스 다이어그램과 1개 핵심 시퀀스를 그린다.
 3. 2.4에서 API 2개(분석 요청/결과 조회)만 먼저 구현해 MVP를 만든다.
 4. 이후 PDF 출력과 고도화(캐시, 재시도 최적화)를 추가한다.
+
+---
+
+## 5) 현재 구현 반영 메모
+
+- `ActivityCollector`와 `DataNormalizer`는 별도 클래스로 구현되지 않았고, 현재는 `GithubApiClient.collectAll()`과 `MetricCalculator.calculate()`가 해당 책임을 나누어 수행한다.
+- 분석 요청 생성은 로그인 없이도 가능하다. 로그인 요청은 `userId`가 저장되고, 비로그인 요청은 `userId=null`로 저장된다.
+- 결과/리포트 조회는 두 경로로 나뉜다. GitHub ID 기준 최신 조회는 로그인 본인만 가능하고, requestId 기준 조회는 요청 소유자가 없으면 허용된다.
+- 이력 조회는 로그인 사용자 본인 GitHub ID 기준이며 최근 10건으로 제한된다.
+- `AnalysisRepository.purgeExpired()`는 1시간 주기로 완료/실패/부분 완료 요청, 2시간 이상 멈춘 RUNNING 요청, 72시간 초과 결과/지표를 정리한다.
