@@ -174,7 +174,7 @@
       el.style.display = 'block';
     }
 
-    fetch('/auth/login', { method: 'GET', redirect: 'manual' })
+    fetch('/auth/config')
       .then(r => r.json())
       .then(data => {
         if (data.configured === false) {

@@ -102,6 +102,14 @@ public class AuthController {
         ));
     }
 
+    /** OAuth 설정 여부 조회 */
+    @GetMapping("/config")
+    public ResponseEntity<?> getOAuthConfig() {
+        return ResponseEntity.ok(Map.of(
+            "configured", authService.isOAuthConfigured()
+        ));
+    }
+
     /** 로그아웃 */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(

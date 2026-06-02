@@ -5,5 +5,6 @@ public enum RequestStatus {
     RUNNING,
     COMPLETED,
     PARTIAL,
+    CANCELLED,
     FAILED
 }

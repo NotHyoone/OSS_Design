@@ -79,9 +79,12 @@ public class AnalysisRequest {
     public boolean transitionTo(RequestStatus newStatus) {
         RequestStatus current = this.status.get();
         boolean allowed = switch (current) {
-            case PENDING  -> newStatus == RequestStatus.RUNNING || newStatus == RequestStatus.FAILED;
+            case PENDING  -> newStatus == RequestStatus.RUNNING
+                          || newStatus == RequestStatus.CANCELLED
+                          || newStatus == RequestStatus.FAILED;
             case RUNNING  -> newStatus == RequestStatus.COMPLETED
                           || newStatus == RequestStatus.PARTIAL
+                          || newStatus == RequestStatus.CANCELLED
                           || newStatus == RequestStatus.FAILED;
             case PARTIAL  -> newStatus == RequestStatus.COMPLETED || newStatus == RequestStatus.FAILED;
             default       -> false;
@@ -109,6 +112,10 @@ public class AnalysisRequest {
         return status.get() == RequestStatus.FAILED;
     }
 
+    public boolean isCancelled() {
+        return status.get() == RequestStatus.CANCELLED;
+    }
+
     public long getElapsedTime() {
         LocalDateTime end = completedAt != null ? completedAt : LocalDateTime.now();
         return java.time.Duration.between(requestedAt, end).toMillis();
@@ -134,8 +141,11 @@ public class AnalysisRequest {
         this.status.set(RequestStatus.FAILED);
     }
 
-    public boolean isCancelled() {
-        return isFailed() && "CANCELLED".equals(errorMessage);
+    public void markCancelled(String msg) {
+        this.errorMessage = msg;
+        this.completedAt = LocalDateTime.now();
+        this.status.set(RequestStatus.CANCELLED);
+        this.detail = "취소됨";
     }
 
     public String getRequestId()        { return requestId; }

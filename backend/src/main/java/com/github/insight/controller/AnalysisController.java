@@ -7,7 +7,6 @@ import com.github.insight.model.AnalysisRequest;
 import com.github.insight.model.AnalysisResult;
 import com.github.insight.model.Metrics;
 import com.github.insight.model.User;
-import com.github.insight.model.enums.RequestStatus;
 import com.github.insight.service.AnalysisService;
 import com.github.insight.service.ReportAssembler;
 import com.github.insight.service.ReportGenerator;
@@ -76,6 +75,7 @@ public class AnalysisController {
                     case RUNNING  -> "running";
                     case COMPLETED -> "done";
                     case PARTIAL   -> "done";
+                    case CANCELLED -> "cancelled";
                     case FAILED    -> "error";
                 };
                 return ResponseEntity.ok(new AnalysisStatusResponse(
@@ -188,6 +188,42 @@ public class AnalysisController {
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
             .contentType(MediaType.APPLICATION_PDF)
             .body(pdf);
+    }
+
+    /** 요청 ID 기준 PDF 다운로드 */
+    @GetMapping("/report/request/{requestId}")
+    public ResponseEntity<?> downloadReportByRequest(
+            @PathVariable String requestId,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        Optional<AnalysisRequest> requestOpt = analysisService.getRequest(requestId);
+        if (requestOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        AnalysisRequest request = requestOpt.get();
+        if (request.getUserId() != null) {
+            Optional<User> userOpt = authenticatedUser(sessionId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(401).body("인증이 필요합니다.");
+            }
+            if (!request.getUserId().equals(userOpt.get().getUserId())) {
+                return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
+            }
+        }
+
+        try {
+            AnalysisResult result = analysisService.getResult(requestId);
+            Optional<Metrics> metricsOpt = analysisService.getMetrics(requestId);
+            byte[] pdf = reportGenerator.renderPdf(result, metricsOpt.orElse(null));
+            String filename = reportGenerator.getFilename(result.getGithubId(), result.getCreatedAt());
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /** 분석 취소 */

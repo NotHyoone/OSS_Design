@@ -54,6 +54,10 @@ public class AnalysisRequestEntity {
         return status == RequestStatus.FAILED;
     }
 
+    public boolean isCancelled() {
+        return status == RequestStatus.CANCELLED;
+    }
+
     public boolean canRetry() {
         return isFailed() && retryCount < 3;
     }

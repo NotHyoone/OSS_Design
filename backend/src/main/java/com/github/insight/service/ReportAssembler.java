@@ -13,6 +13,7 @@ public class ReportAssembler {
 
     public Map<String, Object> toViewModel(AnalysisResult result, Metrics metrics) {
         Map<String, Object> vm = new LinkedHashMap<>();
+        vm.put("requestId",     result.getRequestId());
         vm.put("githubId",      result.getGithubId());
         vm.put("avatarUrl",     result.getAvatarUrl());
         vm.put("analysisDate",  result.getCreatedAt() != null

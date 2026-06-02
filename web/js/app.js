@@ -104,7 +104,7 @@ const API = {
    * 분석 진행 상태 조회 (UC-03 ~ UC-05 Progress)
    * GET /api/analysis/status/{requestId}
    * @param {string} requestId
-   * @returns {Promise<{step: 1|2|3, stepStatus: 'running'|'done'|'error', overallPct: number, detail?: string}>}
+   * @returns {Promise<{step: 1|2|3, stepStatus: 'running'|'done'|'cancelled'|'error', overallPct: number, detail?: string}>}
    */
   getAnalysisStatus: async (requestId) => {
     const res = await fetch(`/api/analysis/status/${encodeURIComponent(requestId)}`);
@@ -149,9 +149,18 @@ const API = {
     return res.json();
   },
 
-  /* ── 취소 ── (STUB 제거 후 실제 API 호출) */
   cancelAnalysis: async (requestId) => {
-    await fetch(`/api/analysis/cancel/${encodeURIComponent(requestId)}`, { method: 'POST' });
+    const res = await fetch(`/api/analysis/cancel/${encodeURIComponent(requestId)}`, { method: 'POST' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  },
+
+  downloadAnalysisReport: async ({ githubId, requestId }) => {
+    const path = requestId
+      ? `/api/analysis/report/request/${encodeURIComponent(requestId)}`
+      : `/api/analysis/report/${encodeURIComponent(githubId)}`;
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.blob();
   },
 
   /** 현재 로그인 사용자 조회 (UC-00) */
@@ -351,6 +360,9 @@ function initProgressPage() {
       if (status.stepStatus === 'error') {
         clearInterval(pollTimer);
         showError('GitHub API 요청 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      } else if (status.stepStatus === 'cancelled') {
+        clearInterval(pollTimer);
+        showError('분석이 취소되었습니다.');
       }
     } catch {
       /* 네트워크 오류 – 폴링 유지 */
@@ -414,6 +426,10 @@ function initProgressPage() {
           el.classList.add('step--error');
           badge.textContent = '오류';
           spinner.classList.add('hidden');
+        } else if (stepStatus === 'cancelled') {
+          el.classList.add('step--error');
+          badge.textContent = '취소됨';
+          spinner.classList.add('hidden');
         }
       } else {
         el.classList.add('step--pending');
@@ -440,6 +456,8 @@ function initResultPage() {
   const params   = getParams();
   const githubId = params.get('id') || 'username';
   const requestId = params.get('req');
+  let activeRequestId = requestId;
+  let activeGithubId = githubId;
 
   /* 이력 비교 버튼 (UC-08) */
   const historyBtn = document.getElementById('btn-history');
@@ -479,14 +497,14 @@ function initResultPage() {
       pdfBtn.disabled = true;
       pdfBtn.textContent = '다운로드 중...';
       try {
-        const response = await fetch(`/api/analysis/report/${encodeURIComponent(githubId)}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const blob = await response.blob();
+        const blob = await API.downloadAnalysisReport({
+          githubId: activeGithubId,
+          requestId: activeRequestId,
+        });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${githubId}_Analysis_${formatDate(new Date()).replace(/-/g, '')}.pdf`;
+        link.download = `${activeGithubId}_Analysis_${formatDate(new Date()).replace(/-/g, '')}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -505,6 +523,9 @@ function initResultPage() {
    * @param {object} result
    */
   function renderResult(result) {
+    activeRequestId = result.requestId || activeRequestId;
+    activeGithubId = result.githubId || activeGithubId;
+
     /* 헤더 */
     document.getElementById('result-username').textContent = '@' + result.githubId;
     document.getElementById('developer-type').textContent  = result.developerType;
@@ -616,8 +637,14 @@ function initHistoryPage() {
     /* 이력 데이터 로드 */
     API.getAnalysisHistory(githubId).then((history) => {
       historyData = history;
+      renderHistoryList(history);
 
-      // 이력 2건 미만 – 빈 상태 (UC-08 Preconditions)
+      if (history.length === 0) {
+        compareControls.classList.add('hidden');
+        emptyState?.classList.remove('hidden');
+        return;
+      }
+
       if (history.length < 2) {
         compareControls.classList.add('hidden');
         emptyState?.classList.remove('hidden');
@@ -625,6 +652,8 @@ function initHistoryPage() {
       }
 
       /* 셀렉트 옵션 생성 */
+      baseSelect.length = 1;
+      compareSelect.length = 1;
       history.forEach((item, idx) => {
         const label = `${formatDate(item.analysisDate)} (점수: ${item.totalScore})`;
         baseSelect.add(new Option(label, idx));
@@ -634,9 +663,6 @@ function initHistoryPage() {
       baseSelect.value    = '0';
       compareSelect.value = String(history.length - 1);
       compareBtn.disabled = false;
-
-      /* 이력 목록 렌더링 */
-      renderHistoryList(history);
     }).catch((error) => {
       showError('분석 이력을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
     });
@@ -731,6 +757,15 @@ function initHistoryPage() {
    */
   function renderHistoryList(history) {
     if (!historyList) return;
+    if (!history.length) {
+      historyList.innerHTML = `
+        <div class="history-item history-item--placeholder" role="listitem">
+          <span class="history-item-placeholder-text">분석 이력이 없습니다.</span>
+        </div>
+      `;
+      return;
+    }
+
     historyList.innerHTML = history.map((item, idx) => `
       <div class="history-item" role="listitem">
         <div>
@@ -739,7 +774,7 @@ function initHistoryPage() {
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
           <span style="font-size:1.3rem; font-weight:800;">${item.totalScore}<span style="font-size:.8rem; color:var(--color-text-muted)"> / 100</span></span>
-          <a href="result.html?id=${encodeURIComponent(item.githubId)}&snap=${idx}" class="btn btn-ghost" style="font-size:.78rem; padding:4px 10px;">결과 보기</a>
+          <a href="result.html?id=${encodeURIComponent(item.githubId)}&req=${encodeURIComponent(item.requestId)}" class="btn btn-ghost" style="font-size:.78rem; padding:4px 10px;">결과 보기</a>
         </div>
       </div>
     `).join('');
