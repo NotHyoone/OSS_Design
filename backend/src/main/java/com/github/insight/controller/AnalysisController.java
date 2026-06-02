@@ -63,7 +63,8 @@ public class AnalysisController {
         }
 
         AnalysisRequest req = analysisService.requestAnalysis(userId, githubId);
-        return ResponseEntity.ok(new AnalysisRequestResponse(req.getRequestId(), 45));
+        return ResponseEntity.ok(new AnalysisRequestResponse(
+            req.getRequestId(), 45, req.getResultAccessToken()));
     }
 
     /** 분석 진행 상태 조회 (UC-03 ~ UC-05) */
@@ -111,6 +112,7 @@ public class AnalysisController {
     @GetMapping("/result/request/{requestId}")
     public ResponseEntity<?> getResultByRequest(
             @PathVariable String requestId,
+            @RequestParam(value = "token", required = false) String token,
             @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
         Optional<AnalysisRequest> requestOpt = analysisService.getRequest(requestId);
         if (requestOpt.isEmpty()) {
@@ -118,15 +120,8 @@ public class AnalysisController {
         }
 
         AnalysisRequest request = requestOpt.get();
-        if (request.getUserId() != null) {
-            Optional<User> userOpt = authenticatedUser(sessionId);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(401).body("인증이 필요합니다.");
-            }
-            if (!request.getUserId().equals(userOpt.get().getUserId())) {
-                return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
-            }
-        }
+        ResponseEntity<?> accessDenied = denyIfCannotAccessRequest(request, sessionId, token);
+        if (accessDenied != null) return accessDenied;
 
         try {
             AnalysisResult result = analysisService.getResult(requestId);
@@ -190,33 +185,71 @@ public class AnalysisController {
             .body(pdf);
     }
 
-    /** 분석 취소 */
-    @PostMapping("/cancel/{requestId}")
-    public ResponseEntity<?> cancel(
+    /** 요청 ID 기준 PDF 다운로드 */
+    @GetMapping("/report/request/{requestId}")
+    public ResponseEntity<?> downloadReportByRequest(
             @PathVariable String requestId,
+            @RequestParam(value = "token", required = false) String token,
             @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
-        Optional<User> userOpt = authenticatedUser(sessionId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body("인증이 필요합니다.");
-        }
-
         Optional<AnalysisRequest> requestOpt = analysisService.getRequest(requestId);
         if (requestOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        User user = userOpt.get();
         AnalysisRequest request = requestOpt.get();
-        String requestOwnerUserId = request.getUserId();
-        if (requestOwnerUserId != null && !requestOwnerUserId.equals(user.getUserId())) {
-            return ResponseEntity.status(403).body("본인 요청만 취소할 수 있습니다.");
+        ResponseEntity<?> accessDenied = denyIfCannotAccessRequest(request, sessionId, token);
+        if (accessDenied != null) return accessDenied;
+
+        try {
+            AnalysisResult result = analysisService.getResult(requestId);
+            Optional<Metrics> metricsOpt = analysisService.getMetrics(requestId);
+            byte[] pdf = reportGenerator.renderPdf(result, metricsOpt.orElse(null));
+            String filename = reportGenerator.getFilename(result.getGithubId(), result.getCreatedAt());
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
-        if (requestOwnerUserId == null && !isOwner(user, request.getGithubId())) {
-            return ResponseEntity.status(403).body("본인 요청만 취소할 수 있습니다.");
+    }
+
+    /** 분석 취소 */
+    @PostMapping("/cancel/{requestId}")
+    public ResponseEntity<?> cancel(
+            @PathVariable String requestId,
+            @RequestParam(value = "token", required = false) String token,
+            @CookieValue(value = "SESSION_ID", required = false) String sessionId) {
+        Optional<AnalysisRequest> requestOpt = analysisService.getRequest(requestId);
+        if (requestOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
+
+        AnalysisRequest request = requestOpt.get();
+        ResponseEntity<?> accessDenied = denyIfCannotAccessRequest(request, sessionId, token);
+        if (accessDenied != null) return accessDenied;
 
         analysisService.cancel(requestId);
         return ResponseEntity.ok().build();
+    }
+
+    private ResponseEntity<?> denyIfCannotAccessRequest(AnalysisRequest request, String sessionId, String token) {
+        if (request.getUserId() == null) {
+            if (analysisService.validateResultAccessToken(request, token)) {
+                return null;
+            }
+            return ResponseEntity.status(403).body("요청 접근 토큰이 필요합니다.");
+        }
+
+        Optional<User> userOpt = authenticatedUser(sessionId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body("인증이 필요합니다.");
+        }
+        if (!request.getUserId().equals(userOpt.get().getUserId())) {
+            return ResponseEntity.status(403).body("본인 데이터만 조회할 수 있습니다.");
+        }
+        return null;
     }
 
     private Optional<User> authenticatedUser(String sessionId) {

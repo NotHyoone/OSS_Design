@@ -15,6 +15,7 @@ public class AnalysisRequest {
     private final LocalDateTime requestedAt;
     private volatile LocalDateTime completedAt;
     private volatile String errorMessage;
+    private final String resultAccessToken;
 
     private final AtomicReference<RequestStatus> status =
             new AtomicReference<>(RequestStatus.PENDING);
@@ -41,11 +42,29 @@ public class AnalysisRequest {
             int step,
             double overallPct,
             String detail) {
+        return restore(requestId, userId, githubId, null, requestedAt, completedAt,
+            errorMessage, status, retryCount, step, overallPct, detail);
+    }
+
+    public static AnalysisRequest restore(
+            String requestId,
+            String userId,
+            String githubId,
+            String resultAccessToken,
+            LocalDateTime requestedAt,
+            LocalDateTime completedAt,
+            String errorMessage,
+            RequestStatus status,
+            int retryCount,
+            int step,
+            double overallPct,
+            String detail) {
         AnalysisRequest restored = new AnalysisRequest(
                 requestId,
                 userId,
                 githubId,
-                requestedAt != null ? requestedAt : LocalDateTime.now());
+                requestedAt != null ? requestedAt : LocalDateTime.now(),
+                resultAccessToken);
         restored.completedAt = completedAt;
         restored.errorMessage = errorMessage;
         restored.status.set(status != null ? status : RequestStatus.PENDING);
@@ -61,10 +80,18 @@ public class AnalysisRequest {
     }
 
     private AnalysisRequest(String requestId, String userId, String githubId, LocalDateTime requestedAt) {
+        this(requestId, userId, githubId, requestedAt, null);
+    }
+
+    private AnalysisRequest(String requestId, String userId, String githubId,
+                            LocalDateTime requestedAt, String resultAccessToken) {
         this.requestId = requestId;
         this.userId = userId;
         this.githubId = githubId;
         this.requestedAt = requestedAt;
+        this.resultAccessToken = resultAccessToken != null
+            ? resultAccessToken
+            : (userId == null ? UUID.randomUUID().toString() : null);
     }
 
     public void updateStatus(RequestStatus newStatus) {
@@ -141,6 +168,7 @@ public class AnalysisRequest {
     public String getRequestId()        { return requestId; }
     public String getUserId()           { return userId; }
     public String getGithubId()         { return githubId; }
+    public String getResultAccessToken() { return resultAccessToken; }
     public LocalDateTime getRequestedAt() { return requestedAt; }
     public LocalDateTime getCompletedAt() { return completedAt; }
     public String getErrorMessage()     { return errorMessage; }

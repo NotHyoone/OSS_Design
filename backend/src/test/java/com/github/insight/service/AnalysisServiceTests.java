@@ -88,7 +88,7 @@ class AnalysisServiceTests {
         when(analysisRepository.findById(requestId))
                 .thenReturn(existing);
 
-        AnalysisRequest result = analysisService.requestAnalysis(null, githubId);
+        AnalysisRequest result = analysisService.requestAnalysis("user-123", githubId);
 
         assertEquals(existing.getRequestId(), result.getRequestId());
         verify(asyncRunner, never()).run(any());

@@ -18,6 +18,9 @@ public class AnalysisRequestEntity {
     @Column(nullable = false)
     private String githubId;
 
+    @Column(unique = true)
+    private String resultAccessToken;
+
     @Column(nullable = false)
     private LocalDateTime requestedAt;
 
@@ -67,6 +70,9 @@ public class AnalysisRequestEntity {
 
     public String getGithubId() { return githubId; }
     public void setGithubId(String githubId) { this.githubId = githubId; }
+
+    public String getResultAccessToken() { return resultAccessToken; }
+    public void setResultAccessToken(String resultAccessToken) { this.resultAccessToken = resultAccessToken; }
 
     public LocalDateTime getRequestedAt() { return requestedAt; }
     public void setRequestedAt(LocalDateTime requestedAt) { this.requestedAt = requestedAt; }

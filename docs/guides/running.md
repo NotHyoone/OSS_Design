@@ -30,7 +30,7 @@ GitHub 로그인을 사용하려면 OAuth App을 먼저 등록해야 합니다.
 
 3. 등록 후 **Client ID**와 **Client Secret**을 메모해 둡니다.
 
-> OAuth App 없이도 GitHub ID 분석 기능은 사용할 수 있습니다. 로그인 없이는 결과 조회·이력·PDF 다운로드가 불가합니다.
+> OAuth App 없이도 GitHub ID 분석 기능은 사용할 수 있습니다. 비로그인 요청은 응답의 `resultAccessToken`으로 해당 요청의 결과·PDF·취소 API에 접근할 수 있으며, 최신 결과/이력 조회는 로그인 사용자만 사용할 수 있습니다.
 
 ---
 
@@ -99,12 +99,14 @@ Started GithubInsightApplication in X.XXX seconds
 | 인증 | GET | `/auth/me` | 현재 로그인 상태 조회 |
 | 인증 | POST | `/auth/logout` | 로그아웃 |
 | GitHub | GET | `/api/github/validate?id={githubId}` | GitHub ID 존재 여부 확인 |
-| 분석 | POST | `/api/analysis/request` | 분석 요청 생성 |
+| 분석 | POST | `/api/analysis/request` | 분석 요청 생성. 비로그인 요청은 `resultAccessToken` 반환 |
 | 분석 | GET | `/api/analysis/status/{requestId}` | 분석 진행 상태 조회 |
 | 분석 | GET | `/api/analysis/result/{githubId}` | 최신 분석 결과 조회 (로그인 필요) |
+| 분석 | GET | `/api/analysis/result/request/{requestId}?token={resultAccessToken}` | 요청 ID 기준 결과 조회. 로그인 요청은 세션, 비로그인 요청은 토큰 필요 |
 | 분석 | GET | `/api/analysis/history/{githubId}` | 분석 이력 목록 (로그인 필요) |
 | 분석 | GET | `/api/analysis/report/{githubId}` | PDF 리포트 다운로드 (로그인 필요) |
-| 분석 | POST | `/api/analysis/cancel/{requestId}` | 분석 취소 |
+| 분석 | GET | `/api/analysis/report/request/{requestId}?token={resultAccessToken}` | 요청 ID 기준 PDF 다운로드. 로그인 요청은 세션, 비로그인 요청은 토큰 필요 |
+| 분석 | POST | `/api/analysis/cancel/{requestId}?token={resultAccessToken}` | 분석 취소. 로그인 요청은 세션, 비로그인 요청은 토큰 필요 |
 
 ### H2 콘솔 접속 정보 (로컬 개발 전용)
 

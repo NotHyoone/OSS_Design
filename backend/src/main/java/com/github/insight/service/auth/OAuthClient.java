@@ -9,6 +9,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Component
@@ -33,10 +35,10 @@ public class OAuthClient {
 
     public String getAuthorizationUrl(String state) {
         return AUTHORIZATION_URL
-            + "?client_id=" + clientId
-            + "&redirect_uri=" + redirectUri
-            + "&scope=read:user,user:email"
-            + "&state=" + state;
+            + "?client_id=" + encode(clientId)
+            + "&redirect_uri=" + encode(redirectUri)
+            + "&scope=" + encode("read:user,user:email")
+            + "&state=" + encode(state);
     }
 
     public String exchangeCodeForToken(String code) {
@@ -85,6 +87,10 @@ public class OAuthClient {
             log.error("GitHub 프로필 조회 실패: {}", e.getMessage());
             throw new RuntimeException("프로필 조회 실패: " + e.getMessage(), e);
         }
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     public boolean isConfigured() {

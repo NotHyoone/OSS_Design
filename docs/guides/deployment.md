@@ -57,6 +57,8 @@ Spring Boot (포트 8080)
 | `GITHUB_OAUTH_CLIENT_ID` | (없음) | 로그인 사용 시 필수 | OAuth App Client ID |
 | `GITHUB_OAUTH_CLIENT_SECRET` | (없음) | 로그인 사용 시 필수 | OAuth App Client Secret |
 | `GITHUB_OAUTH_REDIRECT_URI` | `http://localhost:8080/auth/callback` | 선택 | OAuth 콜백 URI |
+| `GITHUB_OAUTH_COOKIE_SECURE` | `false` | 운영 권장 | HTTPS 운영에서는 `true`로 설정 |
+| `GITHUB_OAUTH_COOKIE_SAME_SITE` | `Lax` | 선택 | 세션 쿠키 SameSite 정책 |
 | `GITHUB_TOKEN` | (없음) | 선택 | Personal Access Token (API rate limit 완화) |
 
 ---
@@ -339,12 +341,14 @@ docker-compose down
 | 인증 | GET | `/auth/me` | 불필요 | 현재 세션 사용자 정보 |
 | 인증 | POST | `/auth/logout` | 필요 | 세션 종료 |
 | GitHub | GET | `/api/github/validate?id={id}` | 불필요 | GitHub ID 존재 확인 |
-| 분석 | POST | `/api/analysis/request` | 불필요 | 분석 요청 (Body: `{"githubId":"..."}`) |
+| 분석 | POST | `/api/analysis/request` | 불필요 | 분석 요청. 비로그인 요청은 `resultAccessToken` 반환 |
 | 분석 | GET | `/api/analysis/status/{requestId}` | 불필요 | 분석 진행률 폴링 |
 | 분석 | GET | `/api/analysis/result/{githubId}` | **필요** | 최신 분석 결과 조회 |
+| 분석 | GET | `/api/analysis/result/request/{requestId}?token={resultAccessToken}` | 조건부 | 요청 ID 기준 결과. 로그인 요청은 세션, 비로그인 요청은 토큰 필요 |
 | 분석 | GET | `/api/analysis/history/{githubId}` | **필요** | 분석 이력 목록 |
 | 분석 | GET | `/api/analysis/report/{githubId}` | **필요** | PDF 리포트 다운로드 |
-| 분석 | POST | `/api/analysis/cancel/{requestId}` | 불필요 | 분석 취소 |
+| 분석 | GET | `/api/analysis/report/request/{requestId}?token={resultAccessToken}` | 조건부 | 요청 ID 기준 PDF. 로그인 요청은 세션, 비로그인 요청은 토큰 필요 |
+| 분석 | POST | `/api/analysis/cancel/{requestId}?token={resultAccessToken}` | 조건부 | 분석 취소. 로그인 요청은 세션, 비로그인 요청은 토큰 필요 |
 
 ---
 
@@ -447,7 +451,7 @@ java -jar backend/target/github-activity-insight-1.0.0.jar --server.port=8081
 |------|------|
 | DB 비밀번호 | 20자 이상 무작위 문자열 사용 |
 | OAuth Secret | 코드/저장소에 절대 포함 금지 |
-| HTTPS | 프로덕션에서 반드시 HTTPS 사용 (OAuth redirect URI 포함) |
+| HTTPS | 프로덕션에서 반드시 HTTPS 사용 (OAuth redirect URI 포함), `GITHUB_OAUTH_COOKIE_SECURE=true` 권장 |
 | H2 콘솔 | 프로덕션 프로파일에서는 비활성화됨 (`enabled=false` 기본값) |
 | DB 접근 | PostgreSQL 방화벽으로 내부망만 허용 |
 | `.env` 파일 | `.gitignore`에 포함 여부 확인 |

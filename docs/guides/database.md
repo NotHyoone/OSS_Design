@@ -226,7 +226,8 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8081"
    - user_id (PK), github_id, email, display_name, avatar_url, session_id
 
 2. **analysis_requests** - 분석 요청 이력
-   - request_id (PK), user_id (FK), status, requested_at, completed_at
+   - request_id (PK), user_id (FK, nullable), github_id, result_access_token, status, requested_at, completed_at
+   - 비로그인 요청은 `result_access_token`으로 해당 요청 결과/PDF/취소 접근을 보호합니다.
 
 3. **analysis_results** - 분석 결과
    - result_id (PK), request_id (FK), total_score, developer_type, trust_level
@@ -241,6 +242,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8081"
 - `DB_PASSWORD`는 `.env` 또는 환경 변수로만 관리
 - Git에 커밋하지 않음 (`.gitignore` 확인)
 - 프로덕션에서는 강력한 암호 사용
+- 비로그인 분석 URL의 `resultAccessToken`은 결과 접근 토큰이므로 로그/공유 범위를 주의
 - PostgreSQL 접근 제한 설정 (방화벽/보안 그룹)
 
 ---

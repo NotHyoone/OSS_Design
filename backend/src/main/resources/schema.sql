@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS analysis_requests (
   request_id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36),
   github_id VARCHAR(100) NOT NULL,
+  result_access_token VARCHAR(36) UNIQUE,
   status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
   requested_at TIMESTAMP NOT NULL,
   completed_at TIMESTAMP,
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS metrics (
 CREATE INDEX IF NOT EXISTS idx_analysis_requests_user_id ON analysis_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_analysis_requests_github_id ON analysis_requests(github_id);
 CREATE INDEX IF NOT EXISTS idx_analysis_requests_status ON analysis_requests(status);
+CREATE INDEX IF NOT EXISTS idx_analysis_requests_access_token ON analysis_requests(result_access_token);
 CREATE INDEX IF NOT EXISTS idx_analysis_results_user_id ON analysis_results(user_id);
 CREATE INDEX IF NOT EXISTS idx_analysis_results_github_id ON analysis_results(github_id);
 CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);

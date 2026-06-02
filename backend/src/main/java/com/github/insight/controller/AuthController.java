@@ -2,11 +2,12 @@ package com.github.insight.controller;
 
 import com.github.insight.model.User;
 import com.github.insight.service.auth.AuthenticationService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +24,9 @@ public class AuthController {
 
     @Value("${github.oauth.cookie-secure:false}")
     private boolean cookieSecure;
+
+    @Value("${github.oauth.cookie-same-site:Lax}")
+    private String cookieSameSite;
 
     public AuthController(AuthenticationService authService) {
         this.authService = authService;
@@ -58,12 +62,7 @@ public class AuthController {
         try {
             User user = authService.handleOAuthCallback(code, state);
 
-            Cookie sessionCookie = new Cookie("SESSION_ID", user.getSessionId());
-            sessionCookie.setHttpOnly(true);
-              sessionCookie.setSecure(cookieSecure);
-            sessionCookie.setPath("/");
-            sessionCookie.setMaxAge(1800); // 30분
-            response.addCookie(sessionCookie);
+            addSessionCookie(response, user.getSessionId(), 1800);
 
             response.setHeader("Location", "/?login=success");
             response.setStatus(HttpServletResponse.SC_FOUND);
@@ -110,12 +109,18 @@ public class AuthController {
         if (sessionId != null) {
             authService.invalidateSession(sessionId);
         }
-        Cookie expiredCookie = new Cookie("SESSION_ID", "");
-        expiredCookie.setHttpOnly(true);
-          expiredCookie.setSecure(cookieSecure);
-        expiredCookie.setPath("/");
-        expiredCookie.setMaxAge(0);
-        response.addCookie(expiredCookie);
+        addSessionCookie(response, "", 0);
         return ResponseEntity.ok(Map.of("message", "로그아웃 완료"));
+    }
+
+    private void addSessionCookie(HttpServletResponse response, String value, int maxAgeSeconds) {
+        ResponseCookie cookie = ResponseCookie.from("SESSION_ID", value)
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(maxAgeSeconds)
+            .sameSite(cookieSameSite)
+            .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

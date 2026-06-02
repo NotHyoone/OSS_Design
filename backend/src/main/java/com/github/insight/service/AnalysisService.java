@@ -51,7 +51,7 @@ public class AnalysisService {
         if (existingId.isPresent()) {
             try {
                 AnalysisRequest existing = analysisRepository.findById(existingId.get());
-                if (existing.isRunning()) return existing;
+                if (existing.isRunning() && canReuseActiveRequest(existing, userId)) return existing;
             } catch (Exception e) {
                 log.debug("기존 분석 요청 조회 실패 ({}): {}", githubId, e.getMessage());
             }
@@ -76,38 +76,36 @@ public class AnalysisService {
             analysisRepository.save(req);
 
             /* Step 1: 데이터 수집 */
-            req.updateProgress(1, 5.0, "사용자 프로필 조회 중...");
+            if (updateProgressAndStopIfCancelled(req, 1, 5.0, "사용자 프로필 조회 중...")) return;
             if (!githubApiClient.validateUserExists(githubId)) {
                 throw new IllegalArgumentException("GitHub 사용자를 찾을 수 없습니다: " + githubId);
             }
 
-            req.updateProgress(1, 15.0, "저장소 및 활동 데이터 수집 중...");
+            if (updateProgressAndStopIfCancelled(req, 1, 15.0, "저장소 및 활동 데이터 수집 중...")) return;
             ActivityData activityData = githubApiClient.collectAll(githubId);
             activityData.setRequestId(requestId);
 
-            req.updateProgress(1, 28.0, "데이터 수집 완료");
-
-            if (req.isCancelled()) return;
+            if (updateProgressAndStopIfCancelled(req, 1, 28.0, "데이터 수집 완료")) return;
 
             /* Step 2: 지표 계산 */
-            req.updateProgress(2, 35.0, "활동성 지표 계산 중...");
+            if (updateProgressAndStopIfCancelled(req, 2, 35.0, "활동성 지표 계산 중...")) return;
             Metrics metrics = metricCalculator.calculate(activityData);
             metrics.setRequestId(requestId);
 
-            req.updateProgress(2, 68.0, "지표 계산 완료");
+            if (updateProgressAndStopIfCancelled(req, 2, 68.0, "지표 계산 완료")) return;
             analysisRepository.saveMetrics(requestId, metrics);
 
-            if (req.isCancelled()) return;
+            if (isCancelledInRepository(req)) return;
 
             /* Step 3: 점수 산출 및 피드백 생성 */
-            req.updateProgress(3, 78.0, "종합 점수 산출 중...");
+            if (updateProgressAndStopIfCancelled(req, 3, 78.0, "종합 점수 산출 중...")) return;
             AnalysisResult result = competencyScorer.evaluate(metrics);
             result.setRequestId(requestId);
             result.setUserId(req.getUserId());
             result.setGithubId(githubId);
             result.setAvatarUrl(activityData.getAvatarUrl());
 
-            req.updateProgress(3, 88.0, "피드백 생성 중...");
+            if (updateProgressAndStopIfCancelled(req, 3, 88.0, "피드백 생성 중...")) return;
             List<String> weaknesses  = competencyScorer.identifyWeaknesses(metrics);
             List<FeedbackItem> items  = feedbackGenerator.generate(weaknesses);
             result.setImprovements(items);
@@ -116,9 +114,10 @@ public class AnalysisService {
             List<String> strengthMsgs = buildStrengthMessages(strengthCategories, activityData, metrics);
             result.setStrengths(strengthMsgs);
 
-            req.updateProgress(3, 95.0, "결과 저장 중...");
+            if (updateProgressAndStopIfCancelled(req, 3, 95.0, "결과 저장 중...")) return;
             analysisRepository.saveResult(result);
 
+            if (isCancelledInRepository(req)) return;
             req.markDone();
             analysisRepository.save(req);
             log.info("분석 완료: {} → 점수={}, 유형={}",
@@ -164,8 +163,7 @@ public class AnalysisService {
         try {
             AnalysisRequest req = analysisRepository.findById(requestId);
             if (req.isRunning()) {
-                req.markError("CANCELLED");
-                analysisRepository.save(req);
+                markCancelled(req);
             }
         } catch (Exception e) {
             log.debug("분석 취소 실패 ({}): {}", requestId, e.getMessage());
@@ -180,6 +178,46 @@ public class AnalysisService {
             analysisRepository.save(req);
             asyncRunner.run(req);
         }
+    }
+
+    public boolean validateResultAccessToken(AnalysisRequest request, String token) {
+        String expected = request.getResultAccessToken();
+        return expected != null && !expected.isBlank()
+            && token != null && !token.isBlank()
+            && expected.equals(token);
+    }
+
+    private boolean canReuseActiveRequest(AnalysisRequest existing, String userId) {
+        if (existing.getUserId() == null) {
+            return userId == null;
+        }
+        return existing.getUserId().equals(userId);
+    }
+
+    private boolean updateProgressAndStopIfCancelled(AnalysisRequest req, int step, double pct, String detail) {
+        if (isCancelledInRepository(req)) return true;
+        req.updateProgress(step, pct, detail);
+        analysisRepository.save(req);
+        return false;
+    }
+
+    private boolean isCancelledInRepository(AnalysisRequest req) {
+        try {
+            AnalysisRequest latest = analysisRepository.findById(req.getRequestId());
+            if (latest.isCancelled()) {
+                markCancelled(req);
+                return true;
+            }
+        } catch (Exception e) {
+            log.debug("취소 상태 조회 실패 ({}): {}", req.getRequestId(), e.getMessage());
+        }
+        return false;
+    }
+
+    private void markCancelled(AnalysisRequest req) {
+        req.markError("CANCELLED");
+        req.updateProgress(req.getStep(), req.getOverallPct(), "분석이 취소되었습니다.");
+        analysisRepository.save(req);
     }
 
     private List<String> buildStrengthMessages(List<String> categories,

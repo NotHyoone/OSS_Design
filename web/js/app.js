@@ -130,8 +130,9 @@ const API = {
    * @param {string} requestId
    * @returns {Promise<AnalysisResult>}
    */
-  getAnalysisResultByRequest: async (requestId) => {
-    const res = await fetch(`/api/analysis/result/request/${encodeURIComponent(requestId)}`);
+  getAnalysisResultByRequest: async (requestId, accessToken = null) => {
+    const tokenQuery = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+    const res = await fetch(`/api/analysis/result/request/${encodeURIComponent(requestId)}${tokenQuery}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   },
@@ -149,9 +150,10 @@ const API = {
     return res.json();
   },
 
-  /* ── 취소 ── (STUB 제거 후 실제 API 호출) */
-  cancelAnalysis: async (requestId) => {
-    await fetch(`/api/analysis/cancel/${encodeURIComponent(requestId)}`, { method: 'POST' });
+  /* ── 취소 ── */
+  cancelAnalysis: async (requestId, accessToken = null) => {
+    const tokenQuery = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+    await fetch(`/api/analysis/cancel/${encodeURIComponent(requestId)}${tokenQuery}`, { method: 'POST' });
   },
 
   /** 현재 로그인 사용자 조회 (UC-00) */
@@ -282,9 +284,10 @@ function initHomePage() {
     startBtn.textContent = '요청 생성 중...';
 
     try {
-      const { requestId } = await API.createAnalysisRequest(githubId);
+      const { requestId, resultAccessToken } = await API.createAnalysisRequest(githubId);
+      const tokenQuery = resultAccessToken ? `&token=${encodeURIComponent(resultAccessToken)}` : '';
       // Progress 페이지로 이동
-      location.href = `progress.html?id=${encodeURIComponent(githubId)}&req=${encodeURIComponent(requestId)}`;
+      location.href = `progress.html?id=${encodeURIComponent(githubId)}&req=${encodeURIComponent(requestId)}${tokenQuery}`;
     } catch {
       showError('분석 요청 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.');
       startBtn.disabled = false;
@@ -324,6 +327,7 @@ function initProgressPage() {
   const params    = getParams();
   const githubId  = params.get('id') || 'unknown';
   const requestId = params.get('req') || 'REQ-0000';
+  const accessToken = params.get('token');
 
   /* 초기 UI 설정 */
   usernameEl.textContent = '@' + githubId;
@@ -344,7 +348,8 @@ function initProgressPage() {
         clearInterval(pollTimer);
         // 결과 페이지로 이동
         setTimeout(() => {
-          location.href = `result.html?id=${encodeURIComponent(githubId)}&req=${encodeURIComponent(requestId)}`;
+          const tokenQuery = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
+          location.href = `result.html?id=${encodeURIComponent(githubId)}&req=${encodeURIComponent(requestId)}${tokenQuery}`;
         }, 800);
       }
 
@@ -372,7 +377,7 @@ function initProgressPage() {
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
       clearInterval(pollTimer);
-      API.cancelAnalysis(requestId).catch(() => {});
+      API.cancelAnalysis(requestId, accessToken).catch(() => {});
       location.href = 'index.html';
     });
   }
@@ -440,6 +445,7 @@ function initResultPage() {
   const params   = getParams();
   const githubId = params.get('id') || 'username';
   const requestId = params.get('req');
+  const accessToken = params.get('token');
 
   /* 이력 비교 버튼 (UC-08) */
   const historyBtn = document.getElementById('btn-history');
@@ -451,7 +457,7 @@ function initResultPage() {
 
   /* 결과 데이터 로드 */
   const loadResult = requestId
-    ? API.getAnalysisResultByRequest(requestId)
+    ? API.getAnalysisResultByRequest(requestId, accessToken)
     : API.getAnalysisResult(githubId);
 
   loadResult.then((result) => {
@@ -479,7 +485,11 @@ function initResultPage() {
       pdfBtn.disabled = true;
       pdfBtn.textContent = '다운로드 중...';
       try {
-        const response = await fetch(`/api/analysis/report/${encodeURIComponent(githubId)}`);
+        const tokenQuery = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+        const reportUrl = requestId
+          ? `/api/analysis/report/request/${encodeURIComponent(requestId)}${tokenQuery}`
+          : `/api/analysis/report/${encodeURIComponent(githubId)}`;
+        const response = await fetch(reportUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const blob = await response.blob();
@@ -731,7 +741,7 @@ function initHistoryPage() {
    */
   function renderHistoryList(history) {
     if (!historyList) return;
-    historyList.innerHTML = history.map((item, idx) => `
+    historyList.innerHTML = history.map((item) => `
       <div class="history-item" role="listitem">
         <div>
           <strong>${formatDate(item.analysisDate)}</strong>
@@ -739,7 +749,7 @@ function initHistoryPage() {
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
           <span style="font-size:1.3rem; font-weight:800;">${item.totalScore}<span style="font-size:.8rem; color:var(--color-text-muted)"> / 100</span></span>
-          <a href="result.html?id=${encodeURIComponent(item.githubId)}&snap=${idx}" class="btn btn-ghost" style="font-size:.78rem; padding:4px 10px;">결과 보기</a>
+          <a href="result.html?id=${encodeURIComponent(item.githubId)}&req=${encodeURIComponent(item.requestId)}" class="btn btn-ghost" style="font-size:.78rem; padding:4px 10px;">결과 보기</a>
         </div>
       </div>
     `).join('');

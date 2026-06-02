@@ -190,7 +190,9 @@ public class GithubApiClient {
                     } catch (DateTimeParseException ignored) {}
                 }
 
-                pr.setMerged(item.get("pull_request") != null);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> pullRequest = (Map<String, Object>) item.get("pull_request");
+                pr.setMerged(pullRequest != null && pullRequest.get("merged_at") != null);
                 result.add(pr);
             }
             return result;

@@ -179,6 +179,7 @@ public class AnalysisRepository {
         entity.setRequestId(model.getRequestId());
         entity.setUserId(model.getUserId());
         entity.setGithubId(model.getGithubId());
+        entity.setResultAccessToken(model.getResultAccessToken());
         entity.setRequestedAt(model.getRequestedAt());
         entity.setCompletedAt(model.getCompletedAt());
         entity.setErrorMessage(model.getErrorMessage());
@@ -195,6 +196,7 @@ public class AnalysisRepository {
             entity.getRequestId(),
             entity.getUserId(),
             entity.getGithubId(),
+            entity.getResultAccessToken(),
             entity.getRequestedAt(),
             entity.getCompletedAt(),
             entity.getErrorMessage(),
