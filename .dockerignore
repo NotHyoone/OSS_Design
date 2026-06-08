@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+data
+logs
+**/target/*
+!backend/target/github-activity-insight-1.0.0.jar
+*.log
+*.pid
+.env
+.env.local
+*.env

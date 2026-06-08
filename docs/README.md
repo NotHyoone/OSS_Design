@@ -13,6 +13,7 @@ docs/
 ├── guides/                    # 실행, DB, 배포/운영 가이드
 │   ├── database.md
 │   ├── deployment.md
+│   ├── operations.md
 │   └── running.md
 └── project/                   # 기획/분석/설계 산출물
     ├── [Analysis]22212046_안효원.md
@@ -31,6 +32,7 @@ docs/
 | Guides | [guides/running.md](guides/running.md) | 로컬 실행 및 빠른 시작 |
 | Guides | [guides/database.md](guides/database.md) | H2/PostgreSQL 설정 |
 | Guides | [guides/deployment.md](guides/deployment.md) | 배포/운영 절차 |
+| Guides | [guides/operations.md](guides/operations.md) | Docker 운영과 시험용 로그인 |
 | Project | [[Conceptualization]22212046안효원.md](project/%5BConceptualization%5D22212046안효원.md) | 기획 단계 산출물 |
 | Project | [[Analysis]22212046_안효원.md](project/%5BAnalysis%5D22212046_안효원.md) | 분석 단계 산출물 |
 | Project | [[Design]22212046_안효원.md](project/%5BDesign%5D22212046_안효원.md) | 설계 단계 산출물 |

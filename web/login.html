@@ -177,7 +177,13 @@
     fetch('/auth/config')
       .then(r => r.json())
       .then(data => {
-        if (data.configured === false) {
+        if (data.configured === false && data.testLoginEnabled === true) {
+          const notice = document.getElementById('oauth-not-configured');
+          notice.innerHTML = '<strong>시험용 로그인 활성화</strong><br/>GitHub OAuth 설정 없이 시험 계정으로 로그인합니다.<br/>운영 환경에서는 TEST_LOGIN_ENABLED=false로 비활성화하세요.';
+          notice.style.display = 'block';
+          const btn = document.getElementById('login-btn');
+          btn.lastChild.textContent = ' 시험용 계정으로 로그인';
+        } else if (data.configured === false) {
           document.getElementById('oauth-not-configured').style.display = 'block';
           const btn = document.getElementById('login-btn');
           btn.style.opacity = '0.5';

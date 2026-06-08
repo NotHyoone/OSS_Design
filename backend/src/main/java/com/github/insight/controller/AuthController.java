@@ -32,6 +32,11 @@ public class AuthController {
     @GetMapping("/login")
     public ResponseEntity<?> login(HttpServletResponse response) {
         if (!authService.isOAuthConfigured()) {
+            if (authService.isTestLoginEnabled()) {
+                User user = authService.createTestLoginSession();
+                addSessionCookie(response, user.getSessionId());
+                return ResponseEntity.status(302).header("Location", "/?login=test").build();
+            }
             return ResponseEntity.ok(Map.of(
                 "configured", false,
                 "message", "GitHub OAuth App이 설정되지 않았습니다. " +
@@ -40,8 +45,6 @@ public class AuthController {
         }
         try {
             String redirectUrl = authService.initiateOAuthFlow();
-            response.setHeader("Location", redirectUrl);
-            response.setStatus(HttpServletResponse.SC_FOUND);
             return ResponseEntity.status(302).header("Location", redirectUrl).build();
         } catch (IllegalStateException e) {
             log.warn("로그인 요청 과부하: {}", e.getMessage());
@@ -58,23 +61,14 @@ public class AuthController {
         try {
             User user = authService.handleOAuthCallback(code, state);
 
-            Cookie sessionCookie = new Cookie("SESSION_ID", user.getSessionId());
-            sessionCookie.setHttpOnly(true);
-              sessionCookie.setSecure(cookieSecure);
-            sessionCookie.setPath("/");
-            sessionCookie.setMaxAge(1800); // 30분
-            response.addCookie(sessionCookie);
+            addSessionCookie(response, user.getSessionId());
 
-            response.setHeader("Location", "/?login=success");
-            response.setStatus(HttpServletResponse.SC_FOUND);
             return ResponseEntity.status(302).header("Location", "/?login=success").build();
 
         } catch (Exception e) {
             log.error("OAuth 콜백 처리 실패: {}", e.getMessage());
             String redirectUrl = "/?login=error&message=" +
                 java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
-            response.setHeader("Location", redirectUrl);
-            response.setStatus(HttpServletResponse.SC_FOUND);
             return ResponseEntity.status(302)
                 .header("Location", redirectUrl)
                 .build();
@@ -106,7 +100,8 @@ public class AuthController {
     @GetMapping("/config")
     public ResponseEntity<?> getOAuthConfig() {
         return ResponseEntity.ok(Map.of(
-            "configured", authService.isOAuthConfigured()
+            "configured", authService.isOAuthConfigured(),
+            "testLoginEnabled", authService.isTestLoginEnabled()
         ));
     }
 
@@ -125,5 +120,14 @@ public class AuthController {
         expiredCookie.setMaxAge(0);
         response.addCookie(expiredCookie);
         return ResponseEntity.ok(Map.of("message", "로그아웃 완료"));
+    }
+
+    private void addSessionCookie(HttpServletResponse response, String sessionId) {
+        Cookie sessionCookie = new Cookie("SESSION_ID", sessionId);
+        sessionCookie.setHttpOnly(true);
+        sessionCookie.setSecure(cookieSecure);
+        sessionCookie.setPath("/");
+        sessionCookie.setMaxAge(1800); // 30분
+        response.addCookie(sessionCookie);
     }
 }
