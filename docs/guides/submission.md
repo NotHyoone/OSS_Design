@@ -13,40 +13,46 @@
 
 ## 2. 소스 코드 압축본 준비
 
-GitHub에서 작업한 소스 코드를 그대로 제출해야 한다면, 가장 안전한 방법은 GitHub 저장소 페이지에서 `Code` -> `Download ZIP`을 사용하는 것이다.
+GitHub에서 작업한 소스 코드를 그대로 제출해야 한다면, GitHub 저장소 페이지에서 `Code` -> `Download ZIP`을 사용할 수 있다. 이 방식은 저장소에 있는 README와 문서 파일도 함께 포함한다.
 
-로컬에서 직접 압축할 경우, 커밋된 파일만 포함하도록 다음 명령을 사용할 수 있다.
+제출 파일을 더 작고 명확하게 만들려면, 평가에 필요한 소스와 실행 보조 파일만 직접 압축한다. 이 프로젝트는 백엔드가 `web/` 정적 프론트엔드 파일을 함께 빌드/서빙하므로 `backend/`만 압축하면 안 되고 `web/`도 함께 포함해야 한다.
+
+커밋된 파일 기준으로 최소 제출 ZIP을 만들려면 다음 명령을 사용할 수 있다.
 
 ```bash
 git status --short
-git archive --format=zip --output=OSS_Design_source.zip HEAD
+git archive --format=zip --output=OSS_Design_source.zip HEAD \
+  backend web README.md .env.example .gitignore .dockerignore docker-compose.yml render.yaml
 ```
 
 `git status --short` 결과에 변경사항이 남아 있다면, 제출할 변경인지 확인한 뒤 커밋하거나 제외한다.
 
-### 포함할 파일과 디렉터리
+### 최소 포함 파일과 디렉터리
 
 ```text
 backend/
 web/
-docs/
 README.md
-AGENTS.md
-docker-compose.yml
-run.sh
 .env.example
 .gitignore
 .dockerignore
+docker-compose.yml
+render.yaml
 ```
 
 ### 제외할 파일과 디렉터리
 
 ```text
 .git/
+AGENTS.md
+run.sh
+docs/guides/
+_submission_excluded/
 backend/target/
 target/
 data/
 logs/
+.vscode/
 .env
 .env.local
 *.jar
