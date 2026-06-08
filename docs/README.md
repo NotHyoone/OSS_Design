@@ -10,17 +10,18 @@ docs/
 ├── assets/                    # 문서 전용 이미지/다이어그램 소스
 │   ├── UseCaseDiagram.png
 │   └── images/
-├── guides/                    # 실행, DB, 배포/운영 가이드
+├── guides/                    # 실행, DB, 배포/운영, 제출 가이드
 │   ├── database.md
 │   ├── deployment.md
 │   ├── operations.md
-│   └── running.md
+│   ├── running.md
+│   └── submission.md
 └── project/                   # 기획/분석/설계 산출물
-    ├── [Analysis]22212046_안효원.md
-    ├── [Conceptualization]22212046안효원.md
+    ├── Analysis_[22212046_안효원].md
+    ├── Conceptualization_[22212046_안효원].md
+    ├── Design_[22212046_안효원].md
+    ├── Implementation_[22212046_안효원].md
     ├── design.html
-    ├── [Design]22212046_안효원.md
-    ├── [Implementation]22212046_안효원.md
     └── structure-draft.md
 ```
 
@@ -33,10 +34,11 @@ docs/
 | Guides | [guides/database.md](guides/database.md) | H2/PostgreSQL 설정 |
 | Guides | [guides/deployment.md](guides/deployment.md) | 배포/운영 절차 |
 | Guides | [guides/operations.md](guides/operations.md) | Docker 운영과 시험용 로그인 |
-| Project | [[Conceptualization]22212046안효원.md](project/%5BConceptualization%5D22212046안효원.md) | 기획 단계 산출물 |
-| Project | [[Analysis]22212046_안효원.md](project/%5BAnalysis%5D22212046_안효원.md) | 분석 단계 산출물 |
-| Project | [[Design]22212046_안효원.md](project/%5BDesign%5D22212046_안효원.md) | 설계 단계 산출물 |
-| Project | [[Implementation]22212046_안효원.md](project/%5BImplementation%5D22212046_안효원.md) | 구현 단계 산출물 |
+| Guides | [guides/submission.md](guides/submission.md) | 과제 제출 및 Render 배포 URL 준비 |
+| Project | [Conceptualization_[22212046_안효원].md](project/Conceptualization_%5B22212046_안효원%5D.md) | 기획 단계 산출물 |
+| Project | [Analysis_[22212046_안효원].md](project/Analysis_%5B22212046_안효원%5D.md) | 분석 단계 산출물 |
+| Project | [Design_[22212046_안효원].md](project/Design_%5B22212046_안효원%5D.md) | 설계 단계 산출물 |
+| Project | [Implementation_[22212046_안효원].md](project/Implementation_%5B22212046_안효원%5D.md) | 구현 단계 산출물 |
 | Project | [project/design.html](project/design.html) | 설계 문서 HTML 버전 |
 | Project | [project/structure-draft.md](project/structure-draft.md) | 구조 초안과 인터페이스 메모 |
 
@@ -44,8 +46,8 @@ docs/
 
 1. [README.md](../README.md)
 2. [guides/running.md](guides/running.md)
-3. [[Conceptualization]22212046안효원.md](project/%5BConceptualization%5D22212046안효원.md)
-4. [[Analysis]22212046_안효원.md](project/%5BAnalysis%5D22212046_안효원.md)
-5. [[Design]22212046_안효원.md](project/%5BDesign%5D22212046_안효원.md)
-6. [[Implementation]22212046_안효원.md](project/%5BImplementation%5D22212046_안효원.md)
-7. 필요 시 [guides/database.md](guides/database.md), [guides/deployment.md](guides/deployment.md)
+3. [Conceptualization_[22212046_안효원].md](project/Conceptualization_%5B22212046_안효원%5D.md)
+4. [Analysis_[22212046_안효원].md](project/Analysis_%5B22212046_안효원%5D.md)
+5. [Design_[22212046_안효원].md](project/Design_%5B22212046_안효원%5D.md)
+6. [Implementation_[22212046_안효원].md](project/Implementation_%5B22212046_안효원%5D.md)
+7. 필요 시 [guides/database.md](guides/database.md), [guides/deployment.md](guides/deployment.md), [guides/submission.md](guides/submission.md)

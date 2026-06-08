@@ -61,10 +61,12 @@ GitHub Activity Insight는 GitHub ID를 입력하면 공개 활동 데이터를 
 .
 ├── AGENTS.md                 # AI 작업 지침
 ├── README.md                 # 프로젝트 소개 및 진입점
+├── render.yaml               # Render Blueprint 배포 설정
 ├── run.sh                    # 로컬 PostgreSQL + Spring Boot 실행 스크립트
 ├── .env.example              # 환경 변수 예시
 ├── data/                     # H2 로컬 DB 파일 생성 위치
 ├── backend/
+│   ├── Dockerfile            # Render/Docker 배포 이미지 빌드 설정
 │   ├── pom.xml               # Maven 설정
 │   ├── scripts/
 │   │   └── init-postgres.sh  # PostgreSQL 스키마 초기화 스크립트
@@ -89,7 +91,7 @@ GitHub Activity Insight는 GitHub ID를 입력하면 공개 활동 데이터를 
 ├── docs/
 │   ├── README.md             # 문서 허브
 │   ├── assets/images/        # 로고, UI 캡처, 다이어그램 이미지
-│   ├── guides/               # 실행, DB, 배포/운영 가이드
+│   ├── guides/               # 실행, DB, 배포/운영, 제출 가이드
 │   └── project/              # 기획, 분석, 설계 산출물
 └── web/
     ├── css/style.css
@@ -213,9 +215,10 @@ java -jar backend/target/github-activity-insight-1.0.0.jar
 | [docs/guides/running.md](docs/guides/running.md) | 로컬 실행 및 빠른 시작 |
 | [docs/guides/database.md](docs/guides/database.md) | H2/PostgreSQL 설정 |
 | [docs/guides/deployment.md](docs/guides/deployment.md) | 배포 및 운영 |
-| [docs/project/[Conceptualization]22212046안효원.md](docs/project/%5BConceptualization%5D22212046안효원.md) | 기획 산출물 |
-| [docs/project/[Analysis]22212046_안효원.md](docs/project/%5BAnalysis%5D22212046_안효원.md) | 분석 산출물 |
-| [docs/project/[Design]22212046_안효원.md](docs/project/%5BDesign%5D22212046_안효원.md) | 설계 산출물 |
-| [docs/project/[Implementation]22212046_안효원.md](docs/project/%5BImplementation%5D22212046_안효원.md) | 구현 산출물 |
+| [docs/guides/submission.md](docs/guides/submission.md) | 과제 제출 및 Render 배포 URL 준비 |
+| [docs/project/Conceptualization_[22212046_안효원].md](docs/project/Conceptualization_%5B22212046_안효원%5D.md) | 기획 산출물 |
+| [docs/project/Analysis_[22212046_안효원].md](docs/project/Analysis_%5B22212046_안효원%5D.md) | 분석 산출물 |
+| [docs/project/Design_[22212046_안효원].md](docs/project/Design_%5B22212046_안효원%5D.md) | 설계 산출물 |
+| [docs/project/Implementation_[22212046_안효원].md](docs/project/Implementation_%5B22212046_안효원%5D.md) | 구현 산출물 |
 | [docs/project/design.html](docs/project/design.html) | 설계 문서 HTML 버전 |
 | [docs/project/structure-draft.md](docs/project/structure-draft.md) | 구조 초안 |
