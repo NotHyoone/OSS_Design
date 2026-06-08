@@ -1,6 +1,7 @@
 # Build output
 target/
 **/target/
+_submission_excluded/
 
 # H2 database files
 data/

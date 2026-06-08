@@ -1,6 +1,7 @@
 .git
 .idea
 .vscode
+_submission_excluded
 data
 logs
 **/target/*
