@@ -26,6 +26,21 @@ public class AuthenticationService {
     @Value("${github.oauth.session-timeout-minutes:30}")
     private int sessionTimeoutMinutes;
 
+    @Value("${test-login.enabled:false}")
+    private boolean testLoginEnabled;
+
+    @Value("${test-login.github-id:test-user}")
+    private String testLoginGithubId;
+
+    @Value("${test-login.email:test-user@example.local}")
+    private String testLoginEmail;
+
+    @Value("${test-login.display-name:Test User}")
+    private String testLoginDisplayName;
+
+    @Value("${test-login.avatar-url:}")
+    private String testLoginAvatarUrl;
+
     /** state → timestamp (CSRF 방어) */
     private final Map<String, LocalDateTime> pendingStates = new ConcurrentHashMap<>();
 
@@ -140,6 +155,23 @@ public class AuthenticationService {
         return sessionId;
     }
 
+    public User createTestLoginSession() {
+        if (!testLoginEnabled) {
+            throw new IllegalStateException("시험용 로그인이 비활성화되어 있습니다.");
+        }
+
+        User user = new User(
+            testLoginGithubId,
+            testLoginEmail,
+            testLoginDisplayName,
+            testLoginAvatarUrl
+        );
+        String sessionId = createSession(user);
+        return userRepository.findBySessionId(sessionId)
+            .map(this::toModel)
+            .orElseThrow(() -> new IllegalStateException("시험용 세션 생성에 실패했습니다."));
+    }
+
     public Optional<User> getUserBySession(String sessionId) {
         if (!validateSession(sessionId)) return Optional.empty();
         return userRepository.findBySessionId(sessionId).map(this::toModel);
@@ -147,6 +179,10 @@ public class AuthenticationService {
 
     public boolean isOAuthConfigured() {
         return oauthClient.isConfigured();
+    }
+
+    public boolean isTestLoginEnabled() {
+        return testLoginEnabled;
     }
 
     private String generateSessionId() {
