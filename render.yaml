@@ -1,0 +1,50 @@
+services:
+  - type: web
+    runtime: docker
+    name: github-activity-insight
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/info
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: github-activity-insight-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: github-activity-insight-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: github-activity-insight-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: github-activity-insight-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: github-activity-insight-db
+          property: password
+      - key: SPRING_SQL_INIT_MODE
+        value: always
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: validate
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_OAUTH_REDIRECT_URI
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+
+databases:
+  - name: github-activity-insight-db
+    plan: free
+    databaseName: insight
+    user: insight_user
+    postgresMajorVersion: "15"
